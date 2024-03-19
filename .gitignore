@@ -130,3 +130,9 @@ ipch/
 *.VC.VC.opendb
 
 
+# Python files
+build
+**/*.egg-info
+**/__pycache__
+**/*.pyc
+**/*cpython*% 
