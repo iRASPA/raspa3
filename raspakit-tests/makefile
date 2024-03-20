@@ -1,6 +1,8 @@
 CXX=clang++
 GTEST_DIR=/usr/local/include/googletest/googletest/
 GTEST_INCLUDE=/usr/local
+#GTEST_DIR=/opt/homebrew/include/googletest/googletest/
+#GTEST_INCLUDE=/opt/homebrew
 
 CPPFLAGS += -isystem $(GTEST_INCLUDE)/include
 
@@ -61,5 +63,5 @@ dudlambda.o: $(GTEST_HEADERS)
 spacegroup.o: $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c spacegroup.cpp
 
-test_raspakit : static_energy.o  gradients.o pbc.o pressure.o ewald.o dudlambda.o spacegroup.o main.o gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -L../mathkit -L../foundationkit -L../symmetrykit -L../raspakit -lraspakit -lsymmetrykit -lfoundationkit -lmathkit -llapack -lpthread $^ -o $@
+test_raspakit : static_energy.o gradients.o pressure.o ewald.o dudlambda.o spacegroup.o main.o gtest_main.a
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -L../mathkit -L../foundationkit -L../symmetrykit -L../raspakit  -lraspakit -lsymmetrykit -lfoundationkit -lmathkit -llapack -lpthread $^ -o $@

@@ -29,6 +29,8 @@ import mc_moves_probabilities_particles;
 import simulationbox;
 import interactions_framework_molecule;
 import interactions_intermolecular;
+import interactions_ewald;
+import interactions_external_field;
 
 
 std::optional<std::pair<RunningEnergy, RunningEnergy>> 
@@ -50,7 +52,7 @@ MC_Moves::GibbsSwapMove_CBMC(RandomNumber &random, System& systemA, System& syst
                                                           systemA.numberOfMoleculesPerComponent[selectedComponent]);
   std::chrono::system_clock::time_point t1 = std::chrono::system_clock::now();
   std::optional<ChainData> growData = 
-    CBMC::growMoleculeSwapInsertion(random, systemA.components, systemA.forceField, systemA.simulationBox, 
+    CBMC::growMoleculeSwapInsertion(random, systemA.hasExternalField, systemA.components, systemA.forceField, systemA.simulationBox, 
                                     systemA.spanOfFrameworkAtoms(), systemA.spanOfMoleculeAtoms(), systemA.beta,
                                     growType, cutOffVDW, cutOffCoulomb, selectedComponent, newMoleculeIndex, 1.0, 
                                     atoms, systemA.numberOfTrialDirections);
@@ -65,7 +67,11 @@ MC_Moves::GibbsSwapMove_CBMC(RandomNumber &random, System& systemA, System& syst
   systemA.components[selectedComponent].mc_moves_statistics.GibbsSwapMove_CBMC.totalConstructed += 1;
 
   std::chrono::system_clock::time_point u1 = std::chrono::system_clock::now();
-  RunningEnergy energyFourierDifferenceA = systemA.energyDifferenceEwaldFourier(systemA.storedEik, newMolecule, {});
+  RunningEnergy energyFourierDifferenceA = 
+    Interactions::energyDifferenceEwaldFourier(systemA.eik_x, systemA.eik_y, systemA.eik_z, systemA.eik_xy,
+                                               systemA.storedEik, systemA.totalEik,
+                                               systemA.forceField, systemA.simulationBox,
+                                               newMolecule, {});
   std::chrono::system_clock::time_point u2 = std::chrono::system_clock::now();
   systemA.components[selectedComponent].mc_moves_cputime.GibbsSwapMoveCBMCEwald += (u2 - u1);
   systemA.mc_moves_cputime.GibbsSwapMoveCBMCEwald += (u2 - u1);
@@ -88,7 +94,7 @@ MC_Moves::GibbsSwapMove_CBMC(RandomNumber &random, System& systemA, System& syst
 
   std::chrono::system_clock::time_point tB1 = std::chrono::system_clock::now();
   ChainData retraceData = 
-    CBMC::retraceMoleculeSwapDeletion(random, systemB.components, systemB.forceField, systemB.simulationBox, 
+    CBMC::retraceMoleculeSwapDeletion(random, systemB.hasExternalField, systemB.components, systemB.forceField, systemB.simulationBox, 
                                       systemB.spanOfFrameworkAtoms(), systemB.spanOfMoleculeAtoms(), systemB.beta,
                                       cutOffVDW, cutOffCoulomb, selectedComponent, selectedMolecule, molecule, 
                                       1.0, 0.0, systemB.numberOfTrialDirections);
@@ -97,7 +103,11 @@ MC_Moves::GibbsSwapMove_CBMC(RandomNumber &random, System& systemA, System& syst
   systemA.mc_moves_cputime.GibbsSwapMoveCBMCNonEwald += (tB2 - tB1);
 
   std::chrono::system_clock::time_point uB1 = std::chrono::system_clock::now();
-  RunningEnergy energyFourierDifferenceB = systemB.energyDifferenceEwaldFourier(systemB.storedEik, {}, molecule);
+  RunningEnergy energyFourierDifferenceB = 
+    Interactions::energyDifferenceEwaldFourier(systemB.eik_x, systemB.eik_y, systemB.eik_z, systemB.eik_xy,
+                                               systemB.storedEik, systemB.totalEik,
+                                               systemB.forceField, systemB.simulationBox,
+                                               {}, molecule);
   std::chrono::system_clock::time_point uB2 = std::chrono::system_clock::now();
   systemA.components[selectedComponent].mc_moves_cputime.GibbsSwapMoveCBMCEwald += (uB2 - uB1);
   systemA.mc_moves_cputime.GibbsSwapMoveCBMCEwald += (uB2 - uB1);
@@ -119,6 +129,7 @@ MC_Moves::GibbsSwapMove_CBMC(RandomNumber &random, System& systemA, System& syst
     std::exp(systemB.beta * (energyFourierDifferenceB.total() + tailEnergyDifferenceB.total()));
 
 
+  // apply acceptance/rejection rule
   if (random.uniform() < (correctionFactorEwaldA * growData->RosenbluthWeight * 
                           static_cast<double>(systemB.numberOfIntegerMoleculesPerComponent[selectedComponent]) * 
                           systemA.simulationBox.volume) / (correctionFactorEwaldB * retraceData.RosenbluthWeight *
@@ -128,7 +139,7 @@ MC_Moves::GibbsSwapMove_CBMC(RandomNumber &random, System& systemA, System& syst
     systemA.components[selectedComponent].mc_moves_statistics.GibbsSwapMove_CBMC.accepted += 1;
     systemA.components[selectedComponent].mc_moves_statistics.GibbsSwapMove_CBMC.totalAccepted += 1;
 
-    systemA.acceptEwaldMove();
+    Interactions::acceptEwaldMove(systemA.forceField, systemA.storedEik, systemA.totalEik);
     systemA.insertMolecule(selectedComponent, growData->atom);
 
     // Debug
@@ -137,7 +148,7 @@ MC_Moves::GibbsSwapMove_CBMC(RandomNumber &random, System& systemA, System& syst
     systemB.components[selectedComponent].mc_moves_statistics.GibbsSwapMove_CBMC.accepted += 1;
     systemB.components[selectedComponent].mc_moves_statistics.GibbsSwapMove_CBMC.totalAccepted += 1;
 
-    systemB.acceptEwaldMove();
+    Interactions::acceptEwaldMove(systemB.forceField, systemB.storedEik, systemB.totalEik);
     systemB.deleteMolecule(selectedComponent, selectedMolecule, molecule);
 
 

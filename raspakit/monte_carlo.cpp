@@ -54,7 +54,12 @@ import mc_moves_cputime;
 import mc_moves_count;
 import property_pressure;
 import transition_matrix;
+import interactions_ewald;
 
+
+MonteCarlo::MonteCarlo(): random(std::nullopt) 
+{
+};
 
 MonteCarlo::MonteCarlo(InputReader& reader) noexcept : 
     numberOfCycles(reader.numberOfCycles),
@@ -123,13 +128,15 @@ void MonteCarlo::initialize()
 
   for (System &system: systems)
   {
-    system.registerEwaldFourierEnergySingleIon(double3(0.0, 0.0, 0.0), 1.0);
+    Interactions::computeEwaldFourierEnergySingleIon(system.eik_x, system.eik_y, system.eik_z, system.eik_xy,
+                                                     system.forceField, system.simulationBox,
+                                                     double3(0.0, 0.0, 0.0), 1.0);
+
     system.removeRedundantMoves();
     system.determineSwapableComponents();
     system.determineFractionalComponents();
     system.rescaleMoveProbabilities();
     system.rescaleMolarFractions();
-    //system.computeComponentFluidProperties();
     system.computeFrameworkDensity();
     system.computeNumberOfPseudoAtoms();
 
@@ -437,11 +444,14 @@ void MonteCarlo::production()
       ++numberOfSteps;
     }
 
+    // sample properties
+    for (System& system : systems)
+    {
+      system.sampleProperties(estimation.currentBin, currentCycle);
+    }
 
     for (System& system : systems)
     {
-      system.sampleProperties(estimation.currentBin);
-
       // add the sample energy to the averages
       if (currentCycle % 10uz == 0uz || currentCycle % printEvery == 0uz)
       {
@@ -473,6 +483,22 @@ void MonteCarlo::production()
       }
     }
 
+    // output properties to files
+    for (System& system : systems)
+    {
+      if(system.computeConventionalRadialDistributionFunction && currentCycle % system.writeConventionalRadialDistributionFunctionEvery == 0uz )
+      {
+        system.conventionalRadialDistributionFunction.writeOutput(system.forceField, system.systemId, system.simulationBox.volume, 
+                                                                  system.totalNumberOfPseudoAtoms);
+      }
+
+      if(system.computeRadialDistributionFunction && currentCycle % system.writeRadialDistributionFunctionEvery == 0uz )
+      {
+        system.radialDistributionFunction.writeOutput(system.systemId);
+      }
+    }
+
+    // write binary-restart file
     if (currentCycle % printEvery == 0uz)
     {
       std::ofstream ofile("restart_data.bin_temp", std::ios::binary);
