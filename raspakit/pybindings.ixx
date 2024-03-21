@@ -30,7 +30,7 @@ import running_energy;
 import component;
 import system;
 
-PYBIND11_MODULE(RaspaKit, m)
+PYBIND11_MODULE(raspa3, m)
 {
   pybind11::class_<int3>(m, "int3")
         .def(pybind11::init<int32_t, int32_t, int32_t>());
