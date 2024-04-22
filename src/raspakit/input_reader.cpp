@@ -1,25 +1,25 @@
 module;
 
 #ifdef USE_LEGACY_HEADERS
-#include <filesystem>
-#include <fstream>
-#include <streambuf>
-#include <cstdlib>
-#include <iostream>
-#include <sstream>
-#include <exception>
-#include <numbers>
-#include <vector>
+#include <algorithm>
 #include <array>
 #include <complex>
-#include <ios>
-#include <optional>
-#include <algorithm>
-#include <map>
-#include <iterator>
+#include <cstdlib>
+#include <exception>
+#include <filesystem>
+#include <fstream>
 #include <functional>
+#include <ios>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <numbers>
+#include <optional>
+#include <sstream>
+#include <streambuf>
+#include <vector>
 #if defined(__has_include) && __has_include(<print>)
-  #include <print>
+#include <print>
 #endif
 #endif
 
@@ -44,12 +44,12 @@ import <map>;
 import <iterator>;
 import <functional>;
 #if defined(__has_include) && __has_include(<print>)
-  import <print>;
+import <print>;
 #endif
 #endif
 
 #if !(defined(__has_include) && __has_include(<print>))
-  import print;
+import print;
 #endif
 
 import int3;
@@ -78,13 +78,14 @@ import property_conventional_rdf;
 import property_rdf;
 import property_density_grid;
 
-int3 parseInt3(const std::string &item, auto json)
+int3 parseInt3(const std::string& item, auto json)
 {
-  if(json.is_array())
+  if (json.is_array())
   {
-    if(json.size() != 3)
+    if (json.size() != 3)
     {
-      throw std::runtime_error(std::format("[Input reader]: key '{}', value {} should be array of 3 integer numbers\n", item, json.dump()));
+      throw std::runtime_error(
+          std::format("[Input reader]: key '{}', value {} should be array of 3 integer numbers\n", item, json.dump()));
     }
     int3 value{};
     try
@@ -96,20 +97,22 @@ int3 parseInt3(const std::string &item, auto json)
     }
     catch (nlohmann::json::exception& ex)
     {
-      throw std::runtime_error(std::format("[Input reader]: key '{}', value {} should be array of 3 integer numbers\n", item, json.dump()));
+      throw std::runtime_error(
+          std::format("[Input reader]: key '{}', value {} should be array of 3 integer numbers\n", item, json.dump()));
     }
   }
-  throw std::runtime_error(std::format("[Input reader]: key '{}', value {} should be array of 3 integer  numbers\n", item, json.dump()));
+  throw std::runtime_error(
+      std::format("[Input reader]: key '{}', value {} should be array of 3 integer  numbers\n", item, json.dump()));
 }
 
-
-double3 parseDouble3(const std::string &item, auto json)
+double3 parseDouble3(const std::string& item, auto json)
 {
-  if(json.is_array())
+  if (json.is_array())
   {
-    if(json.size() != 3)
+    if (json.size() != 3)
     {
-      throw std::runtime_error(std::format("[Input reader]: key '{}', value {} should be array of 3 floatng point numbers\n", item, json.dump()));
+      throw std::runtime_error(std::format(
+          "[Input reader]: key '{}', value {} should be array of 3 floatng point numbers\n", item, json.dump()));
     }
     double3 value{};
     try
@@ -121,16 +124,18 @@ double3 parseDouble3(const std::string &item, auto json)
     }
     catch (nlohmann::json::exception& ex)
     {
-      throw std::runtime_error(std::format("[Input reader]: key '{}', value {} should be array of 3 floating point numbers\n", item, json.dump()));
+      throw std::runtime_error(std::format(
+          "[Input reader]: key '{}', value {} should be array of 3 floating point numbers\n", item, json.dump()));
     }
   }
-  throw std::runtime_error(std::format("[Input reader]: key '{}', value {} should be array of 3 floating point numbers\n", item, json.dump()));
+  throw std::runtime_error(std::format(
+      "[Input reader]: key '{}', value {} should be array of 3 floating point numbers\n", item, json.dump()));
 }
 
-template<typename T>
-std::vector<T> parseList(size_t size, const std::string &item, auto json)
+template <typename T>
+std::vector<T> parseList(size_t size, const std::string& item, auto json)
 {
-  if(json.is_array())
+  if (json.is_array())
   {
     std::vector<T> values{};
     try
@@ -139,7 +144,8 @@ std::vector<T> parseList(size_t size, const std::string &item, auto json)
     }
     catch (nlohmann::json::exception& ex)
     {
-      throw std::runtime_error(std::format("[Input reader (parseList)]: key '{}', value {} should be array of numbers\n", item, json.dump()));
+      throw std::runtime_error(std::format(
+          "[Input reader (parseList)]: key '{}', value {} should be array of numbers\n", item, json.dump()));
     }
 
     // resize to 'size' using the last value to fill the new ones
@@ -147,7 +153,8 @@ std::vector<T> parseList(size_t size, const std::string &item, auto json)
 
     return values;
   }
-  throw std::runtime_error(std::format("[Input reader (parseList)]: key '{}', value {} should be array of numbers\n", item, json.dump()));
+  throw std::runtime_error(
+      std::format("[Input reader (parseList)]: key '{}', value {} should be array of numbers\n", item, json.dump()));
 }
 
 InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
@@ -182,15 +189,16 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
 
   systems = std::vector<System>(jsonNumberOfSystems);
 
-  // Read the local 'force_field.json' if present. This file will be used if no 'ForceField' keyword is specified per system
+  // Read the local 'force_field.json' if present. This file will be used if no 'ForceField' keyword is specified per
+  // system
   std::optional<std::string> directoryName{};
-  if(parsed_data["ForceField"].is_string())
+  if (parsed_data["ForceField"].is_string())
   {
     directoryName = parsed_data["ForceField"].get<std::string>();
   }
   std::vector<std::optional<ForceField>> forceFields = std::vector<std::optional<ForceField>>(jsonNumberOfSystems);
   const std::optional<ForceField> standard = ForceField::readForceField(directoryName, "force_field.json");
-  for(size_t i = 0; i != jsonNumberOfSystems; ++i)
+  for (size_t i = 0; i != jsonNumberOfSystems; ++i)
   {
     forceFields[i] = standard;
   }
@@ -233,6 +241,11 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
   if (parsed_data["NumberOfLambdaBins"].is_number_unsigned())
   {
     // = parsed_data["NumberOfLambdaBins"].get<size_t>();
+  }
+  if (parsed_data["NumberOfThreads"].is_number_unsigned())
+  {
+    numberOfThreads = parsed_data["NumberOfThreads"].get<size_t>();
+    if (numberOfThreads > 1) threadingType = ThreadPool::ThreadingType::ThreadPool;
   }
 
   if (parsed_data["SimulationType"].is_string())
@@ -281,7 +294,7 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
     }
   }
 
-  if(parsed_data["ThreadingType"].is_string())
+  if (parsed_data["ThreadingType"].is_string())
   {
     std::string threadingTypeString = parsed_data["ThreadingType"].get<std::string>();
     if (caseInSensStringCompare(threadingTypeString, "Serial"))
@@ -302,164 +315,167 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
     }
   }
 
-
   // count number of components
   size_t jsonNumberOfComponents{};
-  if(parsed_data.contains("Components"))
+  if (parsed_data.contains("Components"))
   {
     jsonNumberOfComponents = parsed_data["Components"].size();
   }
 
-  // pre-allocate the vector of vector (jsonNumberOfSystems x jsonNumberOfComponents), i.e. for each system a list of components
-  std::vector<std::vector<Component>> jsonComponents(jsonNumberOfSystems, std::vector<Component>(jsonNumberOfComponents));
+  // pre-allocate the vector of vector (jsonNumberOfSystems x jsonNumberOfComponents), i.e. for each system a list of
+  // components
+  std::vector<std::vector<Component>> jsonComponents(jsonNumberOfSystems,
+                                                     std::vector<Component>(jsonNumberOfComponents));
 
   // for each system, a list of how many molecules to create for each component
-  std::vector<std::vector<size_t>> jsonCreateNumberOfMolecules(jsonNumberOfSystems, std::vector<size_t>(jsonNumberOfComponents));
+  std::vector<std::vector<size_t>> jsonCreateNumberOfMolecules(jsonNumberOfSystems,
+                                                               std::vector<size_t>(jsonNumberOfComponents));
 
   // Parse component options
-  for (size_t componentId = 0; auto& [_, item] : parsed_data["Components"].items()) 
+  for (size_t componentId = 0; auto& [_, item] : parsed_data["Components"].items())
   {
     std::vector<MCMoveProbabilitiesParticles> move_probabilities(jsonNumberOfSystems);
 
-    if(!item.contains("Name"))
+    if (!item.contains("Name"))
     {
-      throw std::runtime_error(std::format("[Input reader]: component must have a key 'Name' with a value of string-type'\n"));
+      throw std::runtime_error(
+          std::format("[Input reader]: component must have a key 'Name' with a value of string-type'\n"));
     }
-    std::string jsonComponentName= item["Name"].get<std::string>();
+    std::string jsonComponentName = item["Name"].get<std::string>();
 
     // Convenience notation listing the properties as a single value. These will then be taken for all systems.
     // ========================================================================================================
 
-    if(item["TranslationProbability"].is_number_float())
+    if (item["TranslationProbability"].is_number_float())
     {
       double probabilityTranslationMove = item["TranslationProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilityTranslationMove = probabilityTranslationMove;
       }
     }
 
-    if(item["RandomTranslationProbability"].is_number_float())
+    if (item["RandomTranslationProbability"].is_number_float())
     {
       double probabilityRandomTranslationMove = item["RandomTranslationProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilityRandomTranslationMove = probabilityRandomTranslationMove;
       }
     }
 
-    if(item["RotationProbability"].is_number_float())
+    if (item["RotationProbability"].is_number_float())
     {
       double probabilityRotationMove = item["RotationProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilityRotationMove = probabilityRotationMove;
       }
     }
 
-    if(item["RandomRotationProbability"].is_number_float())
+    if (item["RandomRotationProbability"].is_number_float())
     {
       double probabilityRandomTranslationMove = item["RandomRotationProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilityRandomTranslationMove = probabilityRandomTranslationMove;
       }
     }
 
-    if(item["ReinsertionProbability"].is_number_float())
+    if (item["ReinsertionProbability"].is_number_float())
     {
       double probabilityReinsertionMove_CBMC = item["ReinsertionProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilityReinsertionMove_CBMC = probabilityReinsertionMove_CBMC;
       }
     }
 
-    if(item["SwapConventionalProbability"].is_number_float())
+    if (item["SwapConventionalProbability"].is_number_float())
     {
       double probabilitySwapMove = item["SwapConventionalProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilitySwapMove = probabilitySwapMove;
       }
     }
 
-    if(item["SwapProbability"].is_number_float())
+    if (item["SwapProbability"].is_number_float())
     {
       double probabilitySwapMove_CBMC = item["SwapProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilitySwapMove_CBMC = probabilitySwapMove_CBMC;
       }
     }
 
-    if(item["CFCMC_SwapProbability"].is_number_float())
+    if (item["CFCMC_SwapProbability"].is_number_float())
     {
       double probabilitySwapMove_CFCMC = item["CFCMC_SwapProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilitySwapMove_CFCMC = probabilitySwapMove_CFCMC;
       }
     }
 
-    if(item["CFCMC_CBMC_SwapProbability"].is_number_float())
+    if (item["CFCMC_CBMC_SwapProbability"].is_number_float())
     {
       double probabilitySwapMove_CFCMC_CBMC = item["CFCMC_CBMC_SwapProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilitySwapMove_CFCMC_CBMC = probabilitySwapMove_CFCMC_CBMC;
       }
     }
 
-    if(item["GibbsCFCMCSwapProbability"].is_number_float())
+    if (item["GibbsCFCMCSwapProbability"].is_number_float())
     {
       double probabilityGibbsSwapMove_CFCMC = item["GibbsCFCMCSwapProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilityGibbsSwapMove_CFCMC = probabilityGibbsSwapMove_CFCMC;
       }
     }
 
-    if(item["GibbsSwapProbability"].is_number_float())
+    if (item["GibbsSwapProbability"].is_number_float())
     {
       double probabilityGibbsSwapMove_CBMC = item["GibbsSwapProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilityGibbsSwapMove_CBMC = probabilityGibbsSwapMove_CBMC;
       }
     }
 
-    if(item["WidomProbability"].is_number_float())
+    if (item["WidomProbability"].is_number_float())
     {
       double probabilityWidomMove = item["WidomProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilityWidomMove = probabilityWidomMove;
       }
     }
 
-    if(item["CFCMC_WidomProbability"].is_number_float())
+    if (item["CFCMC_WidomProbability"].is_number_float())
     {
       double probabilityWidomMove_CFCMC = item["CFCMC_WidomProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilityWidomMove_CFCMC = probabilityWidomMove_CFCMC;
       }
     }
 
-    if(item["CFCMC_CBMC_WidomProbability"].is_number_float())
+    if (item["CFCMC_CBMC_WidomProbability"].is_number_float())
     {
       double probabilityWidomMove_CFCMC_CBMC = item["CFCMC_CBMC_WidomProbability"].get<double>();
-      for(size_t i = 0; i < move_probabilities.size(); ++i)
+      for (size_t i = 0; i < move_probabilities.size(); ++i)
       {
         move_probabilities[i].probabilityWidomMove_CFCMC_CBMC = probabilityWidomMove_CFCMC_CBMC;
       }
     }
 
-    if(item["CreateNumberOfMolecules"].is_number_integer())
+    if (item["CreateNumberOfMolecules"].is_number_integer())
     {
       size_t n = item["CreateNumberOfMolecules"].get<size_t>();
-      for(size_t i = 0; i != jsonNumberOfSystems; ++i)
+      for (size_t i = 0; i != jsonNumberOfSystems; ++i)
       {
         jsonCreateNumberOfMolecules[i][componentId] = n;
       }
@@ -468,44 +484,45 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
     // Explicit notation listing the properties as an array of the values for the particular systems
     // ========================================================================================================
 
-    if(item["CreateNumberOfMolecules"].is_array())
+    if (item["CreateNumberOfMolecules"].is_array())
     {
-      std::vector<size_t> initialNumberOfMolecule = parseList<size_t>(jsonNumberOfSystems, "CreateNumberOfMolecules", item["CreateNumberOfMolecules"]);
-      for(size_t i = 0; i != jsonNumberOfSystems; ++i)
+      std::vector<size_t> initialNumberOfMolecule =
+          parseList<size_t>(jsonNumberOfSystems, "CreateNumberOfMolecules", item["CreateNumberOfMolecules"]);
+      for (size_t i = 0; i != jsonNumberOfSystems; ++i)
       {
         jsonCreateNumberOfMolecules[i][componentId] = initialNumberOfMolecule[i];
       }
     }
 
     // construct Component
-    for(size_t i = 0; i != jsonNumberOfSystems; ++i)
+    for (size_t i = 0; i != jsonNumberOfSystems; ++i)
     {
-      if(!forceFields[i].has_value())
+      if (!forceFields[i].has_value())
       {
         throw std::runtime_error(std::format("[Input reader]: No forcefield specified or found'\n"));
       }
 
-      jsonComponents[i][componentId] = Component(Component::Type::Adsorbate, componentId, forceFields[i].value(),
-                        jsonComponentName, jsonComponentName, jsonNumberOfBlocks, jsonNumberOfLambdaBins,
-                        move_probabilities[i]);
+      jsonComponents[i][componentId] =
+          Component(Component::Type::Adsorbate, componentId, forceFields[i].value(), jsonComponentName,
+                    jsonComponentName, jsonNumberOfBlocks, jsonNumberOfLambdaBins, move_probabilities[i]);
     }
 
     componentId++;
   }
 
-  for (size_t systemId = 0; auto& [key, value] : parsed_data["Systems"].items()) 
+  for (size_t systemId = 0; auto& [key, value] : parsed_data["Systems"].items())
   {
     MCMoveProbabilitiesSystem mc_moves_probabilities{};
 
-    if(value["ForceField"].is_string())
+    if (value["ForceField"].is_string())
     {
       std::string name = parsed_data["ForceField"].get<std::string>();
       forceFields[systemId] = ForceField::readForceField(name, "force_field.json");
     }
 
-    if(value["CutOffVDW"].is_number_float())
+    if (value["CutOffVDW"].is_number_float())
     {
-      if(!forceFields[systemId].has_value())
+      if (!forceFields[systemId].has_value())
       {
         throw std::runtime_error(std::format("[Input reader]: No forcefield specified or found'\n"));
       }
@@ -513,18 +530,18 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
       forceFields[systemId]->preComputePotentialShift();
     }
 
-    if(value["CutOffCoulomb"].is_number_float())
+    if (value["CutOffCoulomb"].is_number_float())
     {
-      if(!forceFields[systemId].has_value())
+      if (!forceFields[systemId].has_value())
       {
         throw std::runtime_error(std::format("[Input reader]: No forcefield specified or found'\n"));
       }
       forceFields[systemId]->cutOffCoulomb = value["CutOffCoulomb"].get<double>();
     }
 
-    if(value["ChargeMethod"].is_string())
+    if (value["ChargeMethod"].is_string())
     {
-      if(!forceFields[systemId].has_value())
+      if (!forceFields[systemId].has_value())
       {
         throw std::runtime_error(std::format("[Input reader]: No forcefield specified or found'\n"));
       }
@@ -543,8 +560,7 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
       }
     }
 
-
-    if(value["VolumeMoveProbability"].is_number_float())
+    if (value["VolumeMoveProbability"].is_number_float())
     {
       mc_moves_probabilities.probabilityVolumeMove = value["VolumeMoveProbability"].get<double>();
     }
@@ -556,6 +572,7 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
     }
     std::string typeString = value["Type"].get<std::string>();
 
+>>>>>>> 72c469659cec36c3b0437f36b8ecd857340a29a4
     if (caseInSensStringCompare(typeString, "Framework"))
     {
       // Parse framework options
@@ -653,6 +670,7 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
     systemId++;
   }
 
+<<<<<<< HEAD
   if (parsed_data["GibbsVolumeMoveProbability"].is_number_float())
   {
     mc_moves_probabilities_cross_system.probabilityGibbsVolumeMove =
@@ -665,25 +683,24 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
         parsed_data["ParallelTemperingSwapProbability"].get<double>();
   }
 
+=======
+>>>>>>> 72c469659cec36c3b0437f36b8ecd857340a29a4
   // Post-compute
   // ========================================================
-  
 
   for (size_t i = 0uz; i < systems.size(); ++i)
   {
     systems[i].maxIsothermTerms = 0uz;
-    if(!systems[i].components.empty())
+    if (!systems[i].components.empty())
     {
-      std::vector<Component>::iterator maxIsothermTermsIterator = 
-            std::max_element(systems[i].components.begin(), systems[i].components.end(),
-              [] (Component& lhs, Component& rhs) {
-                  return lhs.isotherm.numberOfSites < rhs.isotherm.numberOfSites;
-              });
+      std::vector<Component>::iterator maxIsothermTermsIterator = std::max_element(
+          systems[i].components.begin(), systems[i].components.end(),
+          [](Component& lhs, Component& rhs) { return lhs.isotherm.numberOfSites < rhs.isotherm.numberOfSites; });
       systems[i].maxIsothermTerms = maxIsothermTermsIterator->isotherm.numberOfSites;
     }
   }
 
-  if(simulationType == SimulationType::MonteCarloTransitionMatrix)
+  if (simulationType == SimulationType::MonteCarloTransitionMatrix)
   {
     for (size_t i = 0uz; i < systems.size(); ++i)
     {
@@ -693,57 +710,59 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
 
   // Checks
   // ========================================================
-    
+
   for (size_t i = 0uz; i < systems.size(); ++i)
   {
     for (size_t reactionId = 0uz; const Reaction& reaction : systems[i].reactions.list)
     {
       if (reaction.productStoichiometry.size() != systems[i].numerOfAdsorbateComponents() ||
-         (reaction.productStoichiometry.size() != systems[i].numerOfAdsorbateComponents()))
+          (reaction.productStoichiometry.size() != systems[i].numerOfAdsorbateComponents()))
       {
-        throw std::runtime_error(std::format("Error [Reaction {}]: mismatch Stoichiometry ({} given not equal" 
-                                             "to twice the number of components {})\n", 
-                                             reactionId, reaction.productStoichiometry.size() + 
-                                             reaction.reactantStoichiometry.size(), 
-                                             2uz * systems[i].numerOfAdsorbateComponents()));
+        throw std::runtime_error(
+            std::format("Error [Reaction {}]: mismatch Stoichiometry ({} given not equal"
+                        "to twice the number of components {})\n",
+                        reactionId, reaction.productStoichiometry.size() + reaction.reactantStoichiometry.size(),
+                        2uz * systems[i].numerOfAdsorbateComponents()));
       }
-    
+
       ++reactionId;
     }
   }
 
   for (size_t i = 0uz; i < systems.size(); ++i)
   {
-    size_t numberOfDUDlambda{ 0uz };
+    size_t numberOfDUDlambda{0uz};
     for (size_t j = 0uz; j < systems[i].components.size(); ++j)
     {
-      if (systems[i].components[j].lambdaGC.computeDUdlambda) 
+      if (systems[i].components[j].lambdaGC.computeDUdlambda)
       {
         ++numberOfDUDlambda;
       }
     }
-    if(numberOfDUDlambda > 1)
+    if (numberOfDUDlambda > 1)
     {
-      throw std::runtime_error(std::format("Error [System {}]: multiple thermodynamic integrations present " 
-                                           "(there can be only one)\n", i));
+      throw std::runtime_error(
+          std::format("Error [System {}]: multiple thermodynamic integrations present "
+                      "(there can be only one)\n",
+                      i));
     }
   }
 
   for (size_t i = 0uz; i < systems.size(); ++i)
   {
     double sum = 0.0;
-    for(size_t j = 0uz; j < systems[i].components.size(); ++j)
+    for (size_t j = 0uz; j < systems[i].components.size(); ++j)
     {
-      if(systems[i].components[j].type != Component::Type::Framework)
+      if (systems[i].components[j].type != Component::Type::Framework)
       {
         sum += systems[i].components[j].molFraction;
       }
     }
-    if(std::abs(sum - 1.0) > 1e-15)
+    if (std::abs(sum - 1.0) > 1e-15)
     {
-      for(size_t j = 0uz; j < systems[i].components.size(); ++j)
+      for (size_t j = 0uz; j < systems[i].components.size(); ++j)
       {
-        if(systems[i].components[j].type != Component::Type::Framework)
+        if (systems[i].components[j].type != Component::Type::Framework)
         {
           systems[i].components[j].molFraction /= sum;
         }
@@ -755,11 +774,11 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
   {
     systems[i].numberOfCarrierGases = 0uz;
     systems[i].carrierGasComponent = 0uz;
-    for(size_t j = 0uz; j < systems[i].components.size(); ++j)
+    for (size_t j = 0uz; j < systems[i].components.size(); ++j)
     {
-      if(systems[i].components[j].type != Component::Type::Framework)
+      if (systems[i].components[j].type != Component::Type::Framework)
       {
-        if(systems[i].components[j].isCarrierGas)
+        if (systems[i].components[j].isCarrierGas)
         {
           systems[i].carrierGasComponent = j;
           std::vector<double> values{1.0, 0.0};
@@ -772,39 +791,41 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
       }
     }
 
-    if(simulationType == SimulationType::Breakthrough)
+    if (simulationType == SimulationType::Breakthrough)
     {
-      if(systems[i].numberOfCarrierGases == 0uz)
+      if (systems[i].numberOfCarrierGases == 0uz)
       {
         throw std::runtime_error("Error [Breakthrough]: no carrier gas component present\n");
       }
-      if(systems[i].numberOfCarrierGases > 1)
+      if (systems[i].numberOfCarrierGases > 1)
       {
-        throw std::runtime_error("Error [Breakthrough]: multiple carrier gas component present (there can be only one)\n");
+        throw std::runtime_error(
+            "Error [Breakthrough]: multiple carrier gas component present (there can be only one)\n");
       }
     }
   }
 
   for (size_t i = 0uz; i < systems.size(); ++i)
   {
-    if(systems[i].tmmc.doTMMC)
+    if (systems[i].tmmc.doTMMC)
     {
-      if(systems[i].numerOfAdsorbateComponents() > 1)
+      if (systems[i].numerOfAdsorbateComponents() > 1)
       {
         throw std::runtime_error("Error: Multiple components for TMMC not yet implemented.\n");
       }
 
       // check initial number of molecules is in the range of the TMMC macrostates
-      for(size_t j = 0uz; j < systems[i].components.size(); ++j)
+      for (size_t j = 0uz; j < systems[i].components.size(); ++j)
       {
-        if(systems[i].components[j].type == Component::Type::Adsorbate)
+        if (systems[i].components[j].type == Component::Type::Adsorbate)
         {
           size_t numberOfMolecules = systems[i].initialNumberOfMolecules[j];
-          if(numberOfMolecules < systems[i].tmmc.minMacrostate || numberOfMolecules > systems[i].tmmc.maxMacrostate)
+          if (numberOfMolecules < systems[i].tmmc.minMacrostate || numberOfMolecules > systems[i].tmmc.maxMacrostate)
           {
-            throw std::runtime_error(std::format("Error: Molecules created ({}) need to fit into the TMMC macrostate "
-                                                 "range ({}-{})\n", numberOfMolecules, systems[i].tmmc.minMacrostate,
-                                                 systems[i].tmmc.maxMacrostate));
+            throw std::runtime_error(
+                std::format("Error: Molecules created ({}) need to fit into the TMMC macrostate "
+                            "range ({}-{})\n",
+                            numberOfMolecules, systems[i].tmmc.minMacrostate, systems[i].tmmc.maxMacrostate));
           }
         }
       }

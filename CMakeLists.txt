@@ -25,7 +25,7 @@ set(CMAKE_CXX_STANDARD 23)
 # clang 17 and greater can avoid this setting
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_definitions(-DUSE_LEGACY_HEADERS)
+add_definitions(-DUSE_LEGACY_HEADERS -DVERSION=${PROJECT_VERSION})
 
 set(MSVC_WARNINGS /W4 /w14242 /w14254 /w14263 /w14265 /w14287 /we4289 /w14296 /w14311 /w14545 /w14546 /w14547 /w14549 /w14555 /w14619 /w14640 /w14826 /w14826 /w14905 /w14906 /w14928 /permissive-)
 
@@ -42,10 +42,10 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 # -stdlib=libc++
-set(CMAKE_CXX_FLAGS_DEBUG "-fexperimental-library  -fopenmp -fmodules -fbuiltin-module-map -g3 -O0 -DDEBUG -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=leak -fsanitize=undefined")
-set(CMAKE_CXX_FLAGS_RELEASE "-fexperimental-library  -fopenmp -fmodules -fbuiltin-module-map -g -O3 -march=native -ffast-math")
-set(CMAKE_CXX_FLAGS_MINSIZEREL "-fexperimental-library  -fopenmp -fmodules -fbuiltin-module-map -g -O3 -march=native -ffast-math")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-fexperimental-library  -fopenmp -fmodules -fbuiltin-module-map -stdlib=libc++ -g -O3 -march=native -ffast-math")
+set(CMAKE_CXX_FLAGS_DEBUG "-fvisibility=hidden -fexperimental-library  -fopenmp -g3 -O0 -DDEBUG -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+set(CMAKE_CXX_FLAGS_RELEASE "-fvisibility=hidden -fexperimental-library  -fopenmp -g -O3 -march=native -ffast-math")
+set(CMAKE_CXX_FLAGS_MINSIZEREL "-fvisibility=hidden -fexperimental-library  -fopenmp -g -O3 -march=native -ffast-math")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-fvisibility=hidden -fexperimental-library  -fopenmp -g -O3 -march=native -ffast-math")
 
 # rpm-settings
 set(CPACK_PACKAGE_VERSION ${VERSION})
