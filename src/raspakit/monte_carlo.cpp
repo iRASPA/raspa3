@@ -108,17 +108,18 @@ MonteCarlo::MonteCarlo(): random(std::nullopt)
 {
 };
 
-MonteCarlo::MonteCarlo(InputReader& reader) noexcept : 
-    numberOfCycles(reader.numberOfCycles),
-    numberOfInitializationCycles(reader.numberOfInitializationCycles),
-    numberOfEquilibrationCycles(reader.numberOfEquilibrationCycles),
-    printEvery(reader.printEvery),
-    writeBinaryRestartEvery(reader.writeBinaryRestartEvery),
-    rescaleWangLandauEvery(reader.rescaleWangLandauEvery),
-    optimizeMCMovesEvery(reader.optimizeMCMovesEvery),
-    systems(std::move(reader.systems)),
-    random(reader.randomSeed),
-    estimation(reader.numberOfBlocks, reader.numberOfCycles)
+MonteCarlo::MonteCarlo(InputReader& reader) noexcept
+    : numberOfCycles(reader.numberOfCycles),
+      numberOfInitializationCycles(reader.numberOfInitializationCycles),
+      numberOfEquilibrationCycles(reader.numberOfEquilibrationCycles),
+      printEvery(reader.printEvery),
+      writeBinaryRestartEvery(reader.writeBinaryRestartEvery),
+      rescaleWangLandauEvery(reader.rescaleWangLandauEvery),
+      optimizeMCMovesEvery(reader.optimizeMCMovesEvery),
+      mc_moves_probabilities_cross_system(reader.mc_moves_probabilities_cross_system),
+      systems(std::move(reader.systems)),
+      random(reader.randomSeed),
+      estimation(reader.numberOfBlocks, reader.numberOfCycles)
 {
     
 }
@@ -191,6 +192,7 @@ void MonteCarlo::initialize()
     std::print(stream, "{}", system.forceField.printPseudoAtomStatus());
     std::print(stream, "{}", system.forceField.printForceFieldStatus());
     std::print(stream, "{}", system.writeComponentStatus());
+    std::print(stream, "{}", mc_moves_probabilities_cross_system.printStatus());
     std::print(stream, "{}", system.reactions.printStatus());
   }
 
@@ -220,11 +222,11 @@ void MonteCarlo::initialize()
 
       std::pair<size_t, size_t> selectedSystemPair = random.randomPairAdjacentIntegers(systems.size());
       System& selectedSystem = systems[selectedSystemPair.first];
-      System& selectSecondSystem = systems[selectedSystemPair.second];
+      System& selectedSecondSystem = systems[selectedSystemPair.second];
 
       size_t selectedComponent = selectedSystem.randomComponent(random);
-      MC_Moves::performRandomMove(random, selectedSystem, selectSecondSystem, 
-                                  selectedComponent, fractionalMoleculeSystem);
+      MC_Moves::performRandomMove(random, selectedSystem, selectedSecondSystem, selectedComponent,
+                                  fractionalMoleculeSystem);
 
       for(System &system : systems)
       {
@@ -233,6 +235,14 @@ void MonteCarlo::initialize()
           component.lambdaGC.sampleOccupancy(system.containsTheFractionalMolecule);
         }
       }
+    }
+    for (size_t i = 0; i < systems.size(); ++i)
+    {
+      std::pair<size_t, size_t> selectedSystemPair = random.randomPairAdjacentIntegers(systems.size());
+      System& selectedSystem = systems[selectedSystemPair.first];
+      System& selectedSecondSystem = systems[selectedSystemPair.second];
+      MC_Moves::performRandomCrossSystemMove(random, selectedSystem, selectedSecondSystem,
+                                             mc_moves_probabilities_cross_system);
     }
 
     if (currentCycle % printEvery == 0uz)
@@ -326,6 +336,15 @@ void MonteCarlo::equilibrate()
                               selectedSystem.containsTheFractionalMolecule);
       selectedSecondSystem.components[selectedComponent].lambdaGC.sampleOccupancy(
                               selectedSecondSystem.containsTheFractionalMolecule);
+    }
+
+    for (size_t i = 0; i < systems.size(); ++i)
+    {
+      std::pair<size_t, size_t> selectedSystemPair = random.randomPairAdjacentIntegers(systems.size());
+      System& selectedSystem = systems[selectedSystemPair.first];
+      System& selectedSecondSystem = systems[selectedSystemPair.second];
+      MC_Moves::performRandomCrossSystemMove(random, selectedSystem, selectedSecondSystem,
+                                             mc_moves_probabilities_cross_system);
     }
 
     if (currentCycle % printEvery == 0uz)
@@ -464,6 +483,14 @@ void MonteCarlo::production()
 
       ++numberOfSteps;
     }
+    for (size_t i = 0; i < systems.size(); ++i)
+    {
+      std::pair<size_t, size_t> selectedSystemPair = random.randomPairAdjacentIntegers(systems.size());
+      System& selectedSystem = systems[selectedSystemPair.first];
+      System& selectedSecondSystem = systems[selectedSystemPair.second];
+      MC_Moves::performRandomCrossSystemMoveProduction(random, selectedSystem, selectedSecondSystem,
+                                                       mc_moves_probabilities_cross_system);
+    }
 
     // sample properties
     for (System& system : systems)
@@ -596,6 +623,7 @@ void MonteCarlo::output()
       std::print(stream, "{}", component.mc_moves_cputime.writeMCMoveCPUTimeStatistics(component.componentId, 
                                                                                             component.name));
     }
+
     std::print(stream, "{}", system.mc_moves_cputime.writeMCMoveCPUTimeStatistics());
 
     std::print(stream, "Production run CPU timings of the MC moves summed over systems and components\n");

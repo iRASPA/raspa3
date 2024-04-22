@@ -70,6 +70,7 @@ import multi_site_isotherm;
 import pressure_range;
 import mc_moves_probabilities_system;
 import mc_moves_probabilities_particles;
+import mc_moves_probabilities_cross_system;
 import reaction;
 import reactions;
 import transition_matrix;
@@ -548,118 +549,121 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
       mc_moves_probabilities.probabilityVolumeMove = value["VolumeMoveProbability"].get<double>();
     }
 
-    if(value["GibbsVolumeMoveProbability"].is_number_float())
+    if (!value.contains("Type"))
     {
-      mc_moves_probabilities.probabilityGibbsVolumeMove = value["GibbsVolumeMoveProbability"].get<double>();
+      throw std::runtime_error(
+          std::format("[Input reader]: system must have a key 'Type' with value 'Box' or 'Framework'\n"));
     }
+    std::string typeString = value["Type"].get<std::string>();
 
-    if (value["ParallelTemperingSwapProbability"].is_number_float())
-    {
-      mc_moves_probabilities.probabilityParallelTemperingSwap = value["ParallelTemperingSwapProbability"].get<double>();
-    }
-
-    if(!value.contains("Type"))
-    {
-      throw std::runtime_error(std::format("[Input reader]: system must have a key 'Type' with value 'Box' or 'Framework'\n"));
-    }
-    std::string typeString= value["Type"].get<std::string>();
-
-    if(caseInSensStringCompare(typeString, "Framework"))
+    if (caseInSensStringCompare(typeString, "Framework"))
     {
       // Parse framework options
-      if(!value.contains("Name"))
+      if (!value.contains("Name"))
       {
-        throw std::runtime_error(std::format("[Input reader]: framework must have a key 'Name' with a value of string-type'\n"));
+        throw std::runtime_error(
+            std::format("[Input reader]: framework must have a key 'Name' with a value of string-type'\n"));
       }
-      std::string frameworkNameString= value["Name"].get<std::string>();
+      std::string frameworkNameString = value["Name"].get<std::string>();
 
-      int3 jsonNumberOfUnitCells{1,1,1};
-      if(value.contains("NumberOfUnitCells"))
+      int3 jsonNumberOfUnitCells{1, 1, 1};
+      if (value.contains("NumberOfUnitCells"))
       {
         jsonNumberOfUnitCells = parseInt3("NumberOfUnitCells", value["NumberOfUnitCells"]);
       }
 
-      if(!value.contains("ExternalTemperature"))
+      if (!value.contains("ExternalTemperature"))
       {
-        throw std::runtime_error(std::format("[Input reader]: framework must have a key 'ExternalTemperature' with a value of floating-point-type'\n"));
+        throw std::runtime_error(std::format(
+            "[Input reader]: framework must have a key 'ExternalTemperature' with a value of floating-point-type'\n"));
       }
       double T = value["ExternalTemperature"].get<double>();
 
       std::optional<double> P{};
-      if(value.contains("ExternalPressure"))
+      if (value.contains("ExternalPressure"))
       {
         P = value["ExternalPressure"].get<double>();
       }
 
-
-      if(!forceFields[systemId].has_value())
+      if (!forceFields[systemId].has_value())
       {
         throw std::runtime_error(std::format("[Input reader]: No forcefield specified or found'\n"));
       }
 
-      std::vector<Framework> jsonFrameworkComponents{Framework(0, forceFields[systemId].value(), frameworkNameString, frameworkNameString, jsonNumberOfUnitCells)};
+      std::vector<Framework> jsonFrameworkComponents{
+          Framework(0, forceFields[systemId].value(), frameworkNameString, frameworkNameString, jsonNumberOfUnitCells)};
 
       // create system
-      systems[systemId] = System(systemId, std::nullopt, T, P, forceFields[systemId].value(), 
-                                 jsonFrameworkComponents, jsonComponents[systemId], jsonCreateNumberOfMolecules[systemId], 5,
-                                 mc_moves_probabilities);
+      systems[systemId] =
+          System(systemId, std::nullopt, T, P, forceFields[systemId].value(), jsonFrameworkComponents,
+                 jsonComponents[systemId], jsonCreateNumberOfMolecules[systemId], 5, mc_moves_probabilities);
     }
-    else if(caseInSensStringCompare(typeString, "Box"))
+    else if (caseInSensStringCompare(typeString, "Box"))
     {
       // Parse box options
-      
-      if(!value.contains("ExternalTemperature"))
+
+      if (!value.contains("ExternalTemperature"))
       {
-        throw std::runtime_error(std::format("[Input reader]: framework must have a key 'ExternalTemperature' with a value of floating-point-type'\n"));
+        throw std::runtime_error(std::format(
+            "[Input reader]: framework must have a key 'ExternalTemperature' with a value of floating-point-type'\n"));
       }
       [[maybe_unused]] double T = value["ExternalTemperature"].get<double>();
 
       std::optional<double> P{};
-      if(value.contains("ExternalPressure"))
+      if (value.contains("ExternalPressure"))
       {
         P = value["ExternalPressure"].get<double>();
       }
       double3 boxLengths{25.0, 25.0, 25.0};
-      if(value.contains("BoxLengths"))
+      if (value.contains("BoxLengths"))
       {
         boxLengths = parseDouble3("BoxLengths", value["BoxLengths"]);
       }
 
       double3 boxAngles{90.0, 90.0, 90.0};
-      if(value.contains("BoxAngles"))
+      if (value.contains("BoxAngles"))
       {
         boxAngles = parseDouble3("BoxAngles", value["BoxAngles"]);
       }
       boxAngles = boxAngles * (std::numbers::pi / 180.0);
 
-
       // create system
-      if(!forceFields[systemId].has_value())
+      if (!forceFields[systemId].has_value())
       {
         throw std::runtime_error(std::format("[Input reader]: No forcefield specified or found'\n"));
       }
       SimulationBox simulationBox{boxLengths.x, boxLengths.y, boxLengths.z, boxAngles.x, boxAngles.y, boxAngles.z};
-      systems[systemId] = System(systemId, simulationBox, T, P, forceFields[systemId].value(), 
-                                 {}, jsonComponents[systemId], jsonCreateNumberOfMolecules[systemId], 5,
-                                 mc_moves_probabilities);
-    } 
+      systems[systemId] =
+          System(systemId, simulationBox, T, P, forceFields[systemId].value(), {}, jsonComponents[systemId],
+                 jsonCreateNumberOfMolecules[systemId], 5, mc_moves_probabilities);
+    }
     else
     {
       throw std::runtime_error(std::format("[Input reader]: system key 'Type' must have value 'Box' or 'Framework'\n"));
     }
 
-    if(value["ThermodynamicIntegration"].is_boolean())
+    if (value["ThermodynamicIntegration"].is_boolean())
     {
-      for(size_t i = 0; i != jsonNumberOfComponents; ++i)
+      for (size_t i = 0; i != jsonNumberOfComponents; ++i)
       {
         systems[systemId].components[i].lambdaGC.computeDUdlambda = value["ThermodynamicIntegration"].get<bool>();
       }
     }
 
-
     systemId++;
   }
 
+  if (parsed_data["GibbsVolumeMoveProbability"].is_number_float())
+  {
+    mc_moves_probabilities_cross_system.probabilityGibbsVolumeMove =
+        parsed_data["GibbsVolumeMoveProbability"].get<double>();
+  }
+
+  if (parsed_data["ParallelTemperingSwapProbability"].is_number_float())
+  {
+    mc_moves_probabilities_cross_system.probabilityParallelTemperingSwap =
+        parsed_data["ParallelTemperingSwapProbability"].get<double>();
+  }
 
   // Post-compute
   // ========================================================

@@ -24,6 +24,5 @@ import system;
 
 export namespace MC_Moves
 {
-std::optional<std::pair<RunningEnergy, RunningEnergy>> ParallelTemperingSwap(RandomNumber &random, System &systemA,
-                                                                             System &systemB);
+void ParallelTemperingSwap(RandomNumber &random, System &systemA, System &systemB);
 }

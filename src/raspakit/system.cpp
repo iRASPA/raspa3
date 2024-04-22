@@ -577,10 +577,6 @@ void System::rescaleMoveProbabilities()
   for (Component& component : components)
   {
     component.mc_moves_probabilities.probabilityVolumeMove = mc_moves_probabilities.probabilityVolumeMove;
-    component.mc_moves_probabilities.probabilityGibbsVolumeMove = mc_moves_probabilities.probabilityGibbsVolumeMove;
-    component.mc_moves_probabilities.probabilityParallelTemperingSwap =
-        mc_moves_probabilities.probabilityParallelTemperingSwap;
-
     component.mc_moves_probabilities.normalizeMoveProbabilties();
   }
 }
@@ -988,7 +984,7 @@ std::string System::writeComponentStatus() const
   {
     std::print(stream, "{}", component.printStatus(forceField));
   }
-  std::print(stream, "\n\n\n\n");
+  std::print(stream, "\n\n");
 
   return stream.str();
 }

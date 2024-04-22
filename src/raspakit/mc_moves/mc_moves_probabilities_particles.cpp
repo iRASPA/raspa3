@@ -56,10 +56,9 @@ void MCMoveProbabilitiesParticles::normalizeMoveProbabilties()
   double totalProbability = probabilityTranslationMove + probabilityRandomTranslationMove + probabilityRotationMove +
                             probabilityRandomRotationMove + probabilityVolumeMove + probabilityReinsertionMove_CBMC +
                             probabilityIdentityChangeMove_CBMC + probabilitySwapMove + probabilitySwapMove_CBMC +
-                            probabilitySwapMove_CFCMC + probabilitySwapMove_CFCMC_CBMC + probabilityGibbsVolumeMove +
-                            probabilityGibbsSwapMove_CBMC + probabilityGibbsSwapMove_CFCMC + probabilityWidomMove +
-                            probabilityWidomMove_CFCMC + probabilityWidomMove_CFCMC_CBMC +
-                            probabilityParallelTemperingSwap;
+                            probabilitySwapMove_CFCMC + probabilitySwapMove_CFCMC_CBMC + probabilityGibbsSwapMove_CBMC +
+                            probabilityGibbsSwapMove_CFCMC + probabilityWidomMove + probabilityWidomMove_CFCMC +
+                            probabilityWidomMove_CFCMC_CBMC;
 
   if (totalProbability > 1e-5)
   {
@@ -74,13 +73,11 @@ void MCMoveProbabilitiesParticles::normalizeMoveProbabilties()
     probabilitySwapMove_CBMC /= totalProbability;
     probabilitySwapMove_CFCMC /= totalProbability;
     probabilitySwapMove_CFCMC_CBMC /= totalProbability;
-    probabilityGibbsVolumeMove /= totalProbability;
     probabilityGibbsSwapMove_CBMC /= totalProbability;
     probabilityGibbsSwapMove_CFCMC /= totalProbability;
     probabilityWidomMove /= totalProbability;
     probabilityWidomMove_CFCMC /= totalProbability;
     probabilityWidomMove_CFCMC_CBMC /= totalProbability;
-    probabilityParallelTemperingSwap /= totalProbability;
   }
 
   accumulatedProbabilityTranslationMove = probabilityTranslationMove;
@@ -94,13 +91,11 @@ void MCMoveProbabilitiesParticles::normalizeMoveProbabilties()
   accumulatedProbabilitySwapMove_CBMC = probabilitySwapMove_CBMC;
   accumulatedProbabilitySwapMove_CFCMC = probabilitySwapMove_CFCMC;
   accumulatedProbabilitySwapMove_CFCMC_CBMC = probabilitySwapMove_CFCMC_CBMC;
-  accumulatedProbabilityGibbsVolumeMove = probabilityGibbsVolumeMove;
   accumulatedProbabilityGibbsSwapMove_CBMC = probabilityGibbsSwapMove_CBMC;
   accumulatedProbabilityGibbsSwapMove_CFCMC = probabilityGibbsSwapMove_CFCMC;
   accumulatedProbabilityWidomMove = probabilityWidomMove;
   accumulatedProbabilityWidomMove_CFCMC = probabilityWidomMove_CFCMC;
   accumulatedProbabilityWidomMove_CFCMC_CBMC = probabilityWidomMove_CFCMC_CBMC;
-  accumulatedProbabilityParallelTemperingSwap = probabilityParallelTemperingSwap;
 
   accumulatedProbabilityRandomTranslationMove += accumulatedProbabilityTranslationMove;
   accumulatedProbabilityRotationMove += accumulatedProbabilityRandomTranslationMove;
@@ -112,13 +107,11 @@ void MCMoveProbabilitiesParticles::normalizeMoveProbabilties()
   accumulatedProbabilitySwapMove_CBMC += accumulatedProbabilitySwapMove;
   accumulatedProbabilitySwapMove_CFCMC += accumulatedProbabilitySwapMove_CBMC;
   accumulatedProbabilitySwapMove_CFCMC_CBMC += accumulatedProbabilitySwapMove_CFCMC;
-  accumulatedProbabilityGibbsVolumeMove += accumulatedProbabilitySwapMove_CFCMC_CBMC;
-  accumulatedProbabilityGibbsSwapMove_CBMC += accumulatedProbabilityGibbsVolumeMove;
+  accumulatedProbabilityGibbsSwapMove_CBMC += accumulatedProbabilitySwapMove_CFCMC_CBMC;
   accumulatedProbabilityGibbsSwapMove_CFCMC += accumulatedProbabilityGibbsSwapMove_CBMC;
   accumulatedProbabilityWidomMove += accumulatedProbabilityGibbsSwapMove_CFCMC;
   accumulatedProbabilityWidomMove_CFCMC += accumulatedProbabilityWidomMove;
   accumulatedProbabilityWidomMove_CFCMC_CBMC += accumulatedProbabilityWidomMove_CFCMC;
-  accumulatedProbabilityParallelTemperingSwap += accumulatedProbabilityWidomMove_CFCMC_CBMC;
 }
 
 Archive<std::ofstream> &operator<<(Archive<std::ofstream> &archive, const MCMoveProbabilitiesParticles &p)
@@ -136,14 +129,12 @@ Archive<std::ofstream> &operator<<(Archive<std::ofstream> &archive, const MCMove
   archive << p.probabilitySwapMove_CBMC;
   archive << p.probabilitySwapMove_CFCMC;
   archive << p.probabilitySwapMove_CFCMC_CBMC;
-  archive << p.probabilityGibbsVolumeMove;
   archive << p.probabilityGibbsSwapMove_CBMC;
   archive << p.probabilityGibbsSwapMove_CFCMC;
   archive << p.probabilityGibbsSwapMove_CFCMC_CBMC;
   archive << p.probabilityWidomMove;
   archive << p.probabilityWidomMove_CFCMC;
   archive << p.probabilityWidomMove_CFCMC_CBMC;
-  archive << p.probabilityParallelTemperingSwap;
 
   archive << p.accumulatedProbabilityTranslationMove;
   archive << p.accumulatedProbabilityRandomTranslationMove;
@@ -156,14 +147,12 @@ Archive<std::ofstream> &operator<<(Archive<std::ofstream> &archive, const MCMove
   archive << p.accumulatedProbabilitySwapMove_CBMC;
   archive << p.accumulatedProbabilitySwapMove_CFCMC;
   archive << p.accumulatedProbabilitySwapMove_CFCMC_CBMC;
-  archive << p.accumulatedProbabilityGibbsVolumeMove;
   archive << p.accumulatedProbabilityGibbsSwapMove_CBMC;
   archive << p.accumulatedProbabilityGibbsSwapMove_CFCMC;
   archive << p.accumulatedProbabilityGibbsSwapMove_CFCMC_CBMC;
   archive << p.accumulatedProbabilityWidomMove;
   archive << p.accumulatedProbabilityWidomMove_CFCMC;
   archive << p.accumulatedProbabilityWidomMove_CFCMC_CBMC;
-  archive << p.accumulatedProbabilityParallelTemperingSwap;
 
   return archive;
 }
@@ -191,14 +180,12 @@ Archive<std::ifstream> &operator>>(Archive<std::ifstream> &archive, MCMoveProbab
   archive >> p.probabilitySwapMove_CBMC;
   archive >> p.probabilitySwapMove_CFCMC;
   archive >> p.probabilitySwapMove_CFCMC_CBMC;
-  archive >> p.probabilityGibbsVolumeMove;
   archive >> p.probabilityGibbsSwapMove_CBMC;
   archive >> p.probabilityGibbsSwapMove_CFCMC;
   archive >> p.probabilityGibbsSwapMove_CFCMC_CBMC;
   archive >> p.probabilityWidomMove;
   archive >> p.probabilityWidomMove_CFCMC;
   archive >> p.probabilityWidomMove_CFCMC_CBMC;
-  archive >> p.probabilityParallelTemperingSwap;
 
   archive >> p.accumulatedProbabilityTranslationMove;
   archive >> p.accumulatedProbabilityRandomTranslationMove;
@@ -211,14 +198,12 @@ Archive<std::ifstream> &operator>>(Archive<std::ifstream> &archive, MCMoveProbab
   archive >> p.accumulatedProbabilitySwapMove_CBMC;
   archive >> p.accumulatedProbabilitySwapMove_CFCMC;
   archive >> p.accumulatedProbabilitySwapMove_CFCMC_CBMC;
-  archive >> p.accumulatedProbabilityGibbsVolumeMove;
   archive >> p.accumulatedProbabilityGibbsSwapMove_CBMC;
   archive >> p.accumulatedProbabilityGibbsSwapMove_CFCMC;
   archive >> p.accumulatedProbabilityGibbsSwapMove_CFCMC_CBMC;
   archive >> p.accumulatedProbabilityWidomMove;
   archive >> p.accumulatedProbabilityWidomMove_CFCMC;
   archive >> p.accumulatedProbabilityWidomMove_CFCMC_CBMC;
-  archive >> p.accumulatedProbabilityParallelTemperingSwap;
 
   return archive;
 }

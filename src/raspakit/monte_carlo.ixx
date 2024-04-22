@@ -28,7 +28,7 @@ import mc_moves;
 import input_reader;
 import energy_status;
 import archive;
-
+import mc_moves_probabilities_cross_system;
 
 export struct MonteCarlo
 {
@@ -63,6 +63,7 @@ export struct MonteCarlo
 
   size_t currentCycle{ 0 };
   SimulationStage simulationStage{SimulationStage::Uninitialized};
+  MCMoveProbabilitiesCrossSystem mc_moves_probabilities_cross_system;
 
   std::vector<System> systems;
   RandomNumber random;

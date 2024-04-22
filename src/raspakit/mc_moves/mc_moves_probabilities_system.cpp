@@ -55,8 +55,6 @@ Archive<std::ofstream> &operator<<(Archive<std::ofstream> &archive, const MCMove
   archive << p.versionNumber;
 
   archive << p.probabilityVolumeMove;
-  archive << p.probabilityGibbsVolumeMove;
-  archive << p.probabilityParallelTemperingSwap;
 
   return archive;
 }
@@ -73,8 +71,6 @@ Archive<std::ifstream> &operator>>(Archive<std::ifstream> &archive, MCMoveProbab
   }
 
   archive >> p.probabilityVolumeMove;
-  archive >> p.probabilityGibbsVolumeMove;
-  archive >> p.probabilityParallelTemperingSwap;
 
   return archive;
 }

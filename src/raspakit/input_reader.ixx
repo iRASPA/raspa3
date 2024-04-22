@@ -52,6 +52,7 @@ import loadings;
 import enthalpy_of_adsorption;
 import energy_status;
 import averages;
+import mc_moves_probabilities_cross_system;
 
 struct InputDataSystem
 {
@@ -118,6 +119,7 @@ export struct InputReader
 
   ForceField forceField;
   std::vector<System> systems{};
+  MCMoveProbabilitiesCrossSystem mc_moves_probabilities_cross_system;
 
   // size_t carrierGasComponent{ 0 };
   std::string displayName{"Column"};

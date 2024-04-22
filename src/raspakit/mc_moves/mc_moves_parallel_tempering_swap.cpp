@@ -58,8 +58,15 @@ import interactions_intermolecular;
 import interactions_ewald;
 import interactions_external_field;
 
-std::optional<std::pair<RunningEnergy, RunningEnergy>> MC_Moves::ParallelTemperingSwap(RandomNumber &random,
-                                                                                       System &systemA, System &systemB)
+/// Performs a parallel tempering swap attemps
+///
+/// Note: updates the atomPositions and simulationBox of two systems if succesful.
+/// - Parameters:
+///   - systemA: the first system to be swapped
+///   - systemB: the second system to be swapped
+/// - returns:
+
+void MC_Moves::ParallelTemperingSwap(RandomNumber &random, System &systemA, System &systemB)
 {
   std::chrono::system_clock::time_point time_begin, time_end;
 
@@ -128,14 +135,12 @@ std::optional<std::pair<RunningEnergy, RunningEnergy>> MC_Moves::ParallelTemperi
     std::swap(systemA.totalNumberOfPseudoAtoms, systemB.totalNumberOfPseudoAtoms);
     std::swap(systemA.runningEnergies, systemB.runningEnergies);
     std::swap(systemA.rigidEnergies, systemB.rigidEnergies);
-    std::swap(systemA.averageEnergies, systemB.averageEnergies);
-    std::swap(systemA.mc_moves_probabilities, systemB.mc_moves_probabilities);
-    std::swap(systemA.mc_moves_statistics, systemB.mc_moves_statistics);
-    std::swap(systemA.mc_moves_cputime, systemB.mc_moves_cputime);
-    std::swap(systemA.mc_moves_count, systemB.mc_moves_count);
 
-    return std::make_pair(systemA.runningEnergies, systemB.runningEnergies);
+    // How do we want to average these things?
+    // std::swap(systemA.averageEnergies, systemB.averageEnergies);
+    // std::swap(systemA.mc_moves_probabilities, systemB.mc_moves_probabilities);
+    // std::swap(systemA.mc_moves_statistics, systemB.mc_moves_statistics);
+    // std::swap(systemA.mc_moves_cputime, systemB.mc_moves_cputime);
+    // std::swap(systemA.mc_moves_count, systemB.mc_moves_count);
   }
-
-  return std::nullopt;
 }

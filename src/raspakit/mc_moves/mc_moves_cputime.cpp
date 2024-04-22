@@ -202,17 +202,6 @@ const std::string MCMoveCpuTime::writeMCMoveCPUTimeStatistics() const
                  volumeMove.count() - volumeMoveNonEwald.count() - volumeMoveEwald.count() - volumeMoveTail.count());
   }
 
-  if(GibbsVolumeMove > std::chrono::duration<double>::zero())
-  {
-    std::print(stream, "\n");
-    std::print(stream, "Gibbs Volume:                    {:14f} [s]\n", GibbsVolumeMove.count());
-    std::print(stream, "    Non-Ewald:                   {:14f} [s]\n", GibbsVolumeMoveNonEwald.count());
-    std::print(stream, "    Ewald:                       {:14f} [s]\n", GibbsVolumeMoveEwald.count());
-    std::print(stream, "    Tail:                        {:14f} [s]\n", GibbsVolumeMoveTail.count());
-    std::print(stream, "    Overhead:                    {:14f} [s]\n",
-                 GibbsVolumeMove.count() - GibbsVolumeMoveNonEwald.count() - GibbsVolumeMoveEwald.count() - GibbsVolumeMoveTail.count());
-  }
-
   std::print(stream, "\n");
 
   std::print(stream, "Property sampling                {:14f} [s]\n", propertySampling.count());
