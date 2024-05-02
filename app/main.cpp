@@ -42,7 +42,7 @@ int main()
   {
     InputReader inputReader("simulation.input");
 
-    ThreadPool::createPool(inputReader.numberOfThreads, inputReader.threadingType);
+    ThreadPool threadPool = ThreadPool::createPool(inputReader.numberOfThreads, inputReader.threadingType);
 
     switch (inputReader.simulationType)
     {

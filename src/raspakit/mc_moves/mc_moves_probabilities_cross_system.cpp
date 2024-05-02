@@ -52,7 +52,7 @@ std::string MCMoveProbabilitiesCrossSystem::printStatus() const
 {
   std::ostringstream stream;
 
-  std::print(stream, "Cross system moves\n");
+  std::print(stream, "Cross system move probabilities\n");
   std::print(stream, "===============================================================================\n\n");
   std::print(stream, "Gibbs Volume Move probability:         {}\n", probabilityGibbsVolumeMove);
   std::print(stream, "Parallel Tempering Swap probability:   {}\n", probabilityParallelTemperingSwap);

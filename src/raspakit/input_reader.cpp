@@ -242,11 +242,6 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
   {
     // = parsed_data["NumberOfLambdaBins"].get<size_t>();
   }
-  if (parsed_data["NumberOfThreads"].is_number_unsigned())
-  {
-    numberOfThreads = parsed_data["NumberOfThreads"].get<size_t>();
-    if (numberOfThreads > 1) threadingType = ThreadPool::ThreadingType::ThreadPool;
-  }
 
   if (parsed_data["SimulationType"].is_string())
   {
@@ -313,6 +308,11 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
     {
       threadingType = ThreadPool::ThreadingType::GPU_Offload;
     }
+  }
+  if (parsed_data["NumberOfThreads"].is_number_unsigned())
+  {
+    numberOfThreads = parsed_data["NumberOfThreads"].get<size_t>();
+    if (numberOfThreads > 1) threadingType = ThreadPool::ThreadingType::ThreadPool;
   }
 
   // count number of components
@@ -572,7 +572,6 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
     }
     std::string typeString = value["Type"].get<std::string>();
 
->>>>>>> 72c469659cec36c3b0437f36b8ecd857340a29a4
     if (caseInSensStringCompare(typeString, "Framework"))
     {
       // Parse framework options
@@ -670,7 +669,6 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
     systemId++;
   }
 
-<<<<<<< HEAD
   if (parsed_data["GibbsVolumeMoveProbability"].is_number_float())
   {
     mc_moves_probabilities_cross_system.probabilityGibbsVolumeMove =
@@ -683,8 +681,6 @@ InputReader::InputReader(const std::string inputFile) : inputStream(inputFile)
         parsed_data["ParallelTemperingSwapProbability"].get<double>();
   }
 
-=======
->>>>>>> 72c469659cec36c3b0437f36b8ecd857340a29a4
   // Post-compute
   // ========================================================
 

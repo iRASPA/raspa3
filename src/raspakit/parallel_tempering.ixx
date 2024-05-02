@@ -27,6 +27,7 @@ import mc_moves;
 import input_reader;
 import energy_status;
 import archive;
+import mc_moves_probabilities_cross_system;
 
 export struct ParallelTempering
 {
@@ -61,6 +62,7 @@ export struct ParallelTempering
 
   size_t currentCycle{0};
   SimulationStage simulationStage{SimulationStage::Uninitialized};
+  MCMoveProbabilitiesCrossSystem mc_moves_probabilities_cross_system;
 
   std::vector<System> systems;
   RandomNumber random;
@@ -71,11 +73,10 @@ export struct ParallelTempering
   BlockErrorEstimation estimation;
 
   std::chrono::duration<double> totalSimulationTime{0};
-  ThreadPool threadPool;
 
-  void runSystemCycleInitialize(System &system);
-  void runSystemCycleEquilibrate(System &system);
-  void runSystemCycleProduction(System &system);
+  size_t runSystemCycleInitialize(System &system);
+  size_t runSystemCycleEquilibrate(System &system);
+  size_t runSystemCycleProduction(System &system);
   void createOutputFiles();
   void run();
   void initialize();

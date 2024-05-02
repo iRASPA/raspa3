@@ -8,6 +8,7 @@ module;
 #include <exception>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <ios>
 #include <iostream>
 #include <map>
@@ -52,6 +53,7 @@ import <ios>;
 import <complex>;
 import <exception>;
 import <source_location>;
+import <future>;
 #if defined(__has_include) && __has_include(<print>)
 import <print>;
 #endif
@@ -102,6 +104,7 @@ import property_pressure;
 import transition_matrix;
 import interactions_ewald;
 import equation_of_states;
+import mc_moves_probabilities_cross_system;
 
 ParallelTempering::ParallelTempering() : random(std::nullopt){};
 
@@ -113,10 +116,10 @@ ParallelTempering::ParallelTempering(InputReader& reader) noexcept
       writeBinaryRestartEvery(reader.writeBinaryRestartEvery),
       rescaleWangLandauEvery(reader.rescaleWangLandauEvery),
       optimizeMCMovesEvery(reader.optimizeMCMovesEvery),
+      mc_moves_probabilities_cross_system(reader.mc_moves_probabilities_cross_system),
       systems(std::move(reader.systems)),
       random(reader.randomSeed),
-      estimation(reader.numberOfBlocks, reader.numberOfCycles),
-      threadPool(static_cast<const unsigned int>(reader.numberOfThreads), reader.threadingType)
+      estimation(reader.numberOfBlocks, reader.numberOfCycles)
 {
 }
 
@@ -160,7 +163,7 @@ void ParallelTempering::createOutputFiles()
   }
 }
 
-void ParallelTempering::runSystemCycleInitialize(System& system)
+size_t ParallelTempering::runSystemCycleInitialize(System& system)
 {
   size_t totalNumberOfMolecules{0uz};
   size_t totalNumberOfComponents{0uz};
@@ -187,20 +190,8 @@ void ParallelTempering::runSystemCycleInitialize(System& system)
       component.lambdaGC.sampleOccupancy(system.containsTheFractionalMolecule);
     }
   }
-  if (currentCycle % printEvery == 0uz)
-  {
-    std::ostream stream(streams[system.systemId].rdbuf());
 
-    system.loadings =
-        Loadings(system.components.size(), system.numberOfIntegerMoleculesPerComponent, system.simulationBox);
-    std::print(stream, "{}", system.writeInitializationStatusReport(currentCycle, numberOfInitializationCycles));
-    std::flush(stream);
-  }
-
-  if (currentCycle % optimizeMCMovesEvery == 0uz)
-  {
-    system.optimizeMCMoves();
-  }
+  return 1;
 }
 
 void ParallelTempering::initialize()
@@ -231,6 +222,7 @@ void ParallelTempering::initialize()
     std::print(stream, "{}", system.forceField.printPseudoAtomStatus());
     std::print(stream, "{}", system.forceField.printForceFieldStatus());
     std::print(stream, "{}", system.writeComponentStatus());
+    std::print(stream, "{}", mc_moves_probabilities_cross_system.printStatus());
     std::print(stream, "{}", system.reactions.printStatus());
   }
 
@@ -245,9 +237,40 @@ void ParallelTempering::initialize()
 
   for (currentCycle = 0uz; currentCycle != numberOfInitializationCycles; currentCycle++)
   {
+    // auto task = [this](System& system) { runSystemCycleInitializate(system); };
     for (System& system : systems)
     {
-      threadPool.enqueue_detach([this](System& system) { runSystemCycleInitialize(system); }, system);
+      runSystemCycleInitialize(system);
+      // threadPool.enqueue(task, system);
+    }
+    for (System& system : systems)
+    {
+      if (currentCycle % optimizeMCMovesEvery == 0uz)
+      {
+        system.optimizeMCMoves();
+      }
+    }
+
+    for (size_t i = 0; i < systems.size(); ++i)
+    {
+      std::pair<size_t, size_t> selectedSystemPair = random.randomPairAdjacentIntegers(systems.size());
+      System& selectedSystem = systems[selectedSystemPair.first];
+      System& selectedSecondSystem = systems[selectedSystemPair.second];
+      MC_Moves::performRandomCrossSystemMove(random, selectedSystem, selectedSecondSystem,
+                                             mc_moves_probabilities_cross_system);
+    }
+
+    if (currentCycle % printEvery == 0uz)
+    {
+      for (System& system : systems)
+      {
+        std::ostream stream(streams[system.systemId].rdbuf());
+
+        system.loadings =
+            Loadings(system.components.size(), system.numberOfIntegerMoleculesPerComponent, system.simulationBox);
+        std::print(stream, "{}", system.writeInitializationStatusReport(currentCycle, numberOfInitializationCycles));
+        std::flush(stream);
+      }
     }
 
     if (currentCycle % writeBinaryRestartEvery == 0uz)
@@ -267,7 +290,7 @@ void ParallelTempering::initialize()
   }
 }
 
-void ParallelTempering::runSystemCycleEquilibrate(System& system)
+size_t ParallelTempering::runSystemCycleEquilibrate(System& system)
 {
   size_t totalNumberOfMolecules{0uz};
   size_t totalNumberOfComponents{0uz};
@@ -294,15 +317,6 @@ void ParallelTempering::runSystemCycleEquilibrate(System& system)
 
     system.components[selectedComponent].lambdaGC.sampleOccupancy(system.containsTheFractionalMolecule);
   }
-  if (currentCycle % printEvery == 0uz)
-  {
-    std::ostream stream(streams[system.systemId].rdbuf());
-
-    system.loadings =
-        Loadings(system.components.size(), system.numberOfIntegerMoleculesPerComponent, system.simulationBox);
-    std::print(stream, "{}", system.writeInitializationStatusReport(currentCycle, numberOfInitializationCycles));
-    std::flush(stream);
-  }
 
   if (currentCycle % rescaleWangLandauEvery == 0uz)
   {
@@ -317,6 +331,7 @@ void ParallelTempering::runSystemCycleEquilibrate(System& system)
   {
     system.optimizeMCMoves();
   }
+  return 1;
 }
 
 void ParallelTempering::equilibrate()
@@ -341,9 +356,32 @@ void ParallelTempering::equilibrate()
 
   for (currentCycle = 0uz; currentCycle != numberOfEquilibrationCycles; ++currentCycle)
   {
+    // auto task = [this](System& system) { runSystemCycleEquilibration(system); };
     for (System& system : systems)
     {
-      threadPool.enqueue_detach([this](System& system) { runSystemCycleEquilibrate(system); }, system);
+      runSystemCycleEquilibrate(system);
+      // threadPool2.enqueue(task, system);
+    }
+    for (size_t i = 0; i < systems.size(); ++i)
+    {
+      std::pair<size_t, size_t> selectedSystemPair = random.randomPairAdjacentIntegers(systems.size());
+      System& selectedSystem = systems[selectedSystemPair.first];
+      System& selectedSecondSystem = systems[selectedSystemPair.second];
+      MC_Moves::performRandomCrossSystemMove(random, selectedSystem, selectedSecondSystem,
+                                             mc_moves_probabilities_cross_system);
+    }
+
+    if (currentCycle % printEvery == 0uz)
+    {
+      for (System& system : systems)
+      {
+        std::ostream stream(streams[system.systemId].rdbuf());
+
+        system.loadings =
+            Loadings(system.components.size(), system.numberOfIntegerMoleculesPerComponent, system.simulationBox);
+        std::print(stream, "{}", system.writeInitializationStatusReport(currentCycle, numberOfInitializationCycles));
+        std::flush(stream);
+      }
     }
 
     if (currentCycle % printEvery == 0uz)
@@ -362,7 +400,7 @@ void ParallelTempering::equilibrate()
   }
 }
 
-void ParallelTempering::runSystemCycleProduction(System& system)
+size_t ParallelTempering::runSystemCycleProduction(System& system)
 {
   size_t totalNumberOfMolecules{0uz};
   size_t totalNumberOfComponents{0uz};
@@ -398,33 +436,15 @@ void ParallelTempering::runSystemCycleProduction(System& system)
     system.mc_moves_cputime.energyPressureComputation += (time2 - time1);
     system.averageEnergies.addSample(estimation.currentBin, molecularPressure.first, system.weight());
   }
-  if (currentCycle % printEvery == 0uz)
-  {
-    std::ostream stream(streams[system.systemId].rdbuf());
-    std::print(stream, "{}", system.writeInitializationStatusReport(currentCycle, numberOfInitializationCycles));
-    std::flush(stream);
-  }
-
   if (currentCycle % optimizeMCMovesEvery == 0uz)
   {
     system.optimizeMCMoves();
   }
-  if (system.propertyConventionalRadialDistributionFunction.has_value())
-  {
-    system.propertyConventionalRadialDistributionFunction->writeOutput(
-        system.forceField, system.systemId, system.simulationBox.volume, system.totalNumberOfPseudoAtoms, currentCycle);
-  }
 
-  if (system.propertyRadialDistributionFunction.has_value())
-  {
-    system.propertyRadialDistributionFunction->writeOutput(system.systemId, currentCycle);
-  }
-  if (system.propertyDensityGrid.has_value())
-  {
-    system.propertyDensityGrid->writeOutput(system.systemId, system.simulationBox, system.forceField,
-                                            system.frameworkComponents, system.components, currentCycle);
-  }
+  system.sampleProperties(estimation.currentBin, currentCycle);
+
   numberOfSteps += numberOfStepsPerCycle;
+  return 1;
 }
 
 void ParallelTempering::production()
@@ -476,15 +496,65 @@ void ParallelTempering::production()
     }
   }
 
+  ThreadPool& pool = ThreadPool::instance();
+
   numberOfSteps = 0uz;
   for (currentCycle = 0uz; currentCycle != numberOfCycles; ++currentCycle)
   {
+    std::cout << currentCycle << " ";
     t1 = std::chrono::system_clock::now();
     estimation.setCurrentSample(currentCycle);
 
+    auto task = [this](System& system) -> size_t { return runSystemCycleProduction(system); };
+    std::vector<std::future<size_t>> threads;
+    for (size_t systemId = 0; systemId < systems.size(); systemId++)
+    {
+      threads[systemId] = pool.enqueue(task, systems[systemId]);
+    }
+    size_t total = 0;
+    for (auto thread : threads)
+    {
+      total += thread.get();
+    }
+
+    for (size_t i = 0; i < systems.size(); ++i)
+    {
+      std::pair<size_t, size_t> selectedSystemPair = random.randomPairAdjacentIntegers(systems.size());
+      System& selectedSystem = systems[selectedSystemPair.first];
+      System& selectedSecondSystem = systems[selectedSystemPair.second];
+      MC_Moves::performRandomCrossSystemMoveProduction(random, selectedSystem, selectedSecondSystem,
+                                                       mc_moves_probabilities_cross_system);
+    }
+
+    if (currentCycle % printEvery == 0uz)
+    {
+      for (System& system : systems)
+      {
+        std::ostream stream(streams[system.systemId].rdbuf());
+        std::print(stream, "{}", system.writeProductionStatusReport(currentCycle, numberOfCycles));
+        std::flush(stream);
+      }
+    }
+
+    // output properties to files
     for (System& system : systems)
     {
-      threadPool.enqueue_detach([this](System& system) { runSystemCycleProduction(system); }, system);
+      if (system.propertyConventionalRadialDistributionFunction.has_value())
+      {
+        system.propertyConventionalRadialDistributionFunction->writeOutput(
+            system.forceField, system.systemId, system.simulationBox.volume, system.totalNumberOfPseudoAtoms,
+            currentCycle);
+      }
+
+      if (system.propertyRadialDistributionFunction.has_value())
+      {
+        system.propertyRadialDistributionFunction->writeOutput(system.systemId, currentCycle);
+      }
+      if (system.propertyDensityGrid.has_value())
+      {
+        system.propertyDensityGrid->writeOutput(system.systemId, system.simulationBox, system.forceField,
+                                                system.frameworkComponents, system.components, currentCycle);
+      }
     }
 
     // write binary-restart file

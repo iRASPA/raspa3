@@ -350,14 +350,12 @@ std::string Component::printStatus(const ForceField& forceField) const
   std::print(stream, "    Swap-move (CBMC) probability:             {} [-]\n", mc.probabilitySwapMove_CBMC);
   std::print(stream, "    Swap-move (CFCMC) probability:            {} [-]\n", mc.probabilitySwapMove_CFCMC);
   std::print(stream, "    Swap-move (CFCMC/CBMC) probability:       {} [-]\n", mc.probabilitySwapMove_CFCMC_CBMC);
-  std::print(stream, "    Gibbs Volume-move probability:            {} [-]\n", mc.probabilityGibbsVolumeMove);
   std::print(stream, "    Gibbs Swap-move (CBMC) probability:       {} [-]\n", mc.probabilityGibbsSwapMove_CBMC);
   std::print(stream, "    Gibbs Swap-move (CFCMC) probability:      {} [-]\n", mc.probabilityGibbsSwapMove_CFCMC);
   std::print(stream, "    Gibbs Swap-move (CFCMC/CBMC) probability: {} [-]\n", mc.probabilityGibbsSwapMove_CFCMC_CBMC);
   std::print(stream, "    Widom probability:                        {} [-]\n", mc.probabilityWidomMove);
   std::print(stream, "    Widom (CFCMC) probability:                {} [-]\n", mc.probabilityWidomMove_CFCMC);
   std::print(stream, "    Widom (CFCMC/CBMC) probability:           {} [-]\n", mc.probabilityWidomMove_CFCMC_CBMC);
-  std::print(stream, "    Parallel Tempering Swap:                  {} [-]\n", mc.probabilityParallelTemperingSwap);
   std::print(stream, "\n");
 
   std::print(stream, "    number of bonds: {}\n", bonds.size());
