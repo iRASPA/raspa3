@@ -87,6 +87,11 @@ export struct SimulationBox
                                                                         ((dr.y >= 0.0) ? 0.5 : -0.5))) * cell.by;
         s.z = dr.z - static_cast<double>(static_cast<std::make_signed_t<std::size_t>>(dr.z * inverseCell.cz + 
                                                                         ((dr.z >= 0.0) ? 0.5 : -0.5))) * cell.cz;
+        /*
+        s.x = dr.x - cell.ax * std::rint(dr.x * inverseCell.ax);
+        s.y = dr.y - cell.by * std::rint(dr.y * inverseCell.by);
+        s.z = dr.z - cell.cz * std::rint(dr.z * inverseCell.cz);
+        */
         return s;
       }
       default:

@@ -286,21 +286,24 @@ Interactions::computeFrameworkMoleculeTailEnergyDifference(const ForceField &for
   return energySum;
 }
 
-ForceFactor Interactions::computeFrameworkMoleculeGradient(const ForceField &forceField,                                    
+std::pair<ForceFactor, ForceFactor> Interactions::computeFrameworkMoleculeGradient(const ForceField &forceField,                                    
                                                            const SimulationBox &simulationBox,                              
                                                            std::span<Atom> frameworkAtoms,
                                                            std::span<Atom> moleculeAtoms) noexcept
 {
-  double3 dr, posA, posB, f;
+  double3 dr, posA, posB;
   double rr;
 
   bool noCharges = forceField.noCharges;
   const double cutOffVDWSquared = forceField.cutOffVDW * forceField.cutOffVDW;
   const double cutOffChargeSquared = forceField.cutOffCoulomb * forceField.cutOffCoulomb;
 
-  ForceFactor energy{ 0.0, 0.0, 0.0 };
+  ForceFactor energyVDW{ 0.0, 0.0, 0.0 };
+  ForceFactor energyCoulomb{ 0.0, 0.0, 0.0 };
 
-  for (std::span<const Atom>::iterator it1 = frameworkAtoms.begin(); it1 != frameworkAtoms.end(); ++it1)
+  if (moleculeAtoms.empty()) return {energyVDW, energyCoulomb};
+
+  for (std::span<Atom>::iterator it1 = frameworkAtoms.begin(); it1 != frameworkAtoms.end(); ++it1)
   {
     posA = it1->position;
     size_t typeA = static_cast<size_t>(it1->type);
@@ -323,31 +326,30 @@ ForceFactor Interactions::computeFrameworkMoleculeGradient(const ForceField &for
 
       if (rr < cutOffVDWSquared)
       {
-        ForceFactor forceFactor = 
+        ForceFactor forceFactor =
           potentialVDWGradient(forceField, groupIdA, groupIdB, scalingVDWA, scalingVDWB, rr, typeA, typeB);
 
-        energy += forceFactor;
+        energyVDW += forceFactor;
 
-        const double3 factor = forceFactor.forceFactor * dr;
+        const double3 f = forceFactor.forceFactor * dr;
 
-        it2->gradient -= factor;
+        it2->gradient -= f;
       }
       if (!noCharges && rr < cutOffChargeSquared)
       {
         double r = std::sqrt(rr);
-        ForceFactor energyFactor = 
-          potentialCoulombGradient(forceField, groupIdA, groupIdB, scalingCoulombA, scalingCoulombB, r, 
-                                   chargeA, chargeB);
+        ForceFactor forceFactor =
+          potentialCoulombGradient(forceField, groupIdA, groupIdB, scalingCoulombA, scalingCoulombB, r, chargeA, chargeB);
 
-        energy += energyFactor;
+        energyCoulomb += forceFactor;
 
-        const double3 factor = energyFactor.forceFactor * dr;
+        const double3 f = forceFactor.forceFactor * dr;
 
-        it2->gradient -= factor;
+        it2->gradient -= f;
       }
     }
   }
-  return energy;
+  return {energyVDW, energyCoulomb};
 }
 
 
@@ -362,7 +364,7 @@ Interactions::computeFrameworkMoleculeEnergyStrainDerivative(const ForceField &f
   double3 dr, posA, posB, f;
   double rr;
 
-  double3x3 strainDerivative;
+  double3x3 strainDerivativeTensor;
   EnergyStatus energy(1, frameworkComponents.size(), components.size());
 
   bool noCharges = forceField.noCharges;
@@ -370,7 +372,7 @@ Interactions::computeFrameworkMoleculeEnergyStrainDerivative(const ForceField &f
   const double cutOffChargeSquared = forceField.cutOffCoulomb * forceField.cutOffCoulomb;
   const double preFactor = 2.0 * std::numbers::pi / simulationBox.volume;
 
-  if (moleculeAtoms.empty()) return std::make_pair(energy, strainDerivative);
+  if (moleculeAtoms.empty()) return std::make_pair(energy, strainDerivativeTensor);
 
   for (std::span<const Atom>::iterator it1 = frameworkAtoms.begin(); it1 != frameworkAtoms.end(); ++it1)
   {
@@ -381,7 +383,7 @@ Interactions::computeFrameworkMoleculeEnergyStrainDerivative(const ForceField &f
     double scalingVDWA = it1->scalingVDW;
     double scalingCoulombA = it1->scalingCoulomb;
     double chargeA = it1->charge;
-    for (std::span<const Atom>::iterator it2 = moleculeAtoms.begin(); it2 != moleculeAtoms.end(); ++it2)
+    for (std::span<Atom>::iterator it2 = moleculeAtoms.begin(); it2 != moleculeAtoms.end(); ++it2)
     {
       size_t compB = static_cast<size_t>(it2->componentId);
 
@@ -401,21 +403,55 @@ Interactions::computeFrameworkMoleculeEnergyStrainDerivative(const ForceField &f
 
       if (rr < cutOffVDWSquared)
       {
-        EnergyFactor energyFactor = 
-          potentialVDWEnergy(forceField, groupIdA, groupIdB, scalingVDWA, scalingVDWB, rr, typeA, typeB);
+        ForceFactor forceFactor =
+            potentialVDWGradient(forceField, groupIdA, groupIdB, scalingVDWA, scalingVDWB, rr, typeA, typeB);
 
-        energy.frameworkComponentEnergy(compA, compB).VanDerWaals += energyFactor;
+        energy.frameworkComponentEnergy(compA, compB).VanDerWaals += EnergyFactor(forceFactor.energy, 0.0);
+
+        const double3 g = forceFactor.forceFactor * dr;
+
+        it2->gradient -= g;
+
+        strainDerivativeTensor.ax += g.x*dr.x;
+        strainDerivativeTensor.bx += g.y*dr.x;
+        strainDerivativeTensor.cx += g.z*dr.x;
+
+        strainDerivativeTensor.ay += g.x*dr.y;
+        strainDerivativeTensor.by += g.y*dr.y;
+        strainDerivativeTensor.cy += g.z*dr.y;
+
+        strainDerivativeTensor.az += g.x*dr.z;
+        strainDerivativeTensor.bz += g.y*dr.z;
+        strainDerivativeTensor.cz += g.z*dr.z;
       }
       if (!noCharges && rr < cutOffChargeSquared)
       {
         double r = std::sqrt(rr);
-        EnergyFactor energyFactor = 
-          potentialCoulombEnergy(forceField, groupIdA, groupIdB, scalingCoulombA, scalingCoulombB, r, chargeA, chargeB);
 
-        energy.frameworkComponentEnergy(compA, compB).CoulombicReal += energyFactor;
+        ForceFactor forceFactor =
+            potentialCoulombGradient(forceField, groupIdA, groupIdB, scalingCoulombA, scalingCoulombB, r,
+                                     chargeA, chargeB);
+
+        energy.frameworkComponentEnergy(compA, compB).CoulombicReal += EnergyFactor(forceFactor.energy, 0.0);
+
+        const double3 g = forceFactor.forceFactor * dr;
+
+        it2->gradient -= g;
+
+        strainDerivativeTensor.ax += g.x*dr.x;
+        strainDerivativeTensor.bx += g.y*dr.x;
+        strainDerivativeTensor.cx += g.z*dr.x;
+
+        strainDerivativeTensor.ay += g.x*dr.y;
+        strainDerivativeTensor.by += g.y*dr.y;
+        strainDerivativeTensor.cy += g.z*dr.y;
+
+        strainDerivativeTensor.az += g.x*dr.z;
+        strainDerivativeTensor.bz += g.y*dr.z;
+        strainDerivativeTensor.cz += g.z*dr.z;
       }
     }
   }
 
-  return std::make_pair(energy, strainDerivative);
+  return std::make_pair(energy, strainDerivativeTensor);
 }

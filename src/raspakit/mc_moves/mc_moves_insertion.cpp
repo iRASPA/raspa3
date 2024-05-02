@@ -38,6 +38,7 @@ import <iomanip>;
 
 
 import component;
+import molecule;
 import atom;
 import double3;
 import double3x3;
@@ -73,8 +74,8 @@ MC_Moves::insertionMove(RandomNumber &random, System& system, size_t selectedCom
   system.components[selectedComponent].mc_moves_statistics.swapInsertionMove.counts += 1;
   system.components[selectedComponent].mc_moves_statistics.swapInsertionMove.totalCounts += 1;
 
-  std::vector trialMolecule = system.equilibratedMoleculeRandomInBox(random, selectedComponent, 1.0, 
-                                system.numberOfMoleculesPerComponent[selectedComponent]);
+  std::vector<Atom> trialMolecule = system.equilibratedMoleculeRandomInBox(random, selectedComponent, 1.0, 
+                                    system.numberOfMoleculesPerComponent[selectedComponent]);
 
   system.components[selectedComponent].mc_moves_statistics.swapInsertionMove.constructed += 1;
   system.components[selectedComponent].mc_moves_statistics.swapInsertionMove.totalConstructed += 1;
@@ -146,7 +147,7 @@ MC_Moves::insertionMove(RandomNumber &random, System& system, size_t selectedCom
     system.components[selectedComponent].mc_moves_statistics.swapInsertionMove.totalAccepted += 1;
 
     Interactions::acceptEwaldMove(system.forceField, system.storedEik, system.totalEik);
-    system.insertMolecule(selectedComponent, trialMolecule);
+    system.insertMolecule(selectedComponent, Molecule(), trialMolecule);
 
     return {energyDifference, double3(0.0, 1.0 - Pacc, Pacc)};
   };

@@ -75,6 +75,7 @@ import randomnumbers;
 import stringutils;
 import int3;
 import double3;
+import simd_quatd;
 import cubic;
 import atom;
 import framework;
@@ -160,6 +161,7 @@ System::System(size_t id, std::optional<SimulationBox> box, double T, std::optio
     totalNumberOfPseudoAtoms(forceField.pseudoAtoms.size()),
     averageSimulationBox(numberOfBlocks),
     atomPositions({}),
+    moleculePositions({}),
     runningEnergies(),
     averageEnergies(numberOfBlocks, 1, f.size(), c.size()),
     currentEnergyStatus(1, f.size(), c.size()),
@@ -226,7 +228,7 @@ void System::determineSimulationBox()
   } 
 }
 
-void System::insertFractionalMolecule(size_t selectedComponent, std::vector<Atom> atoms, size_t moleculeId)
+void System::insertFractionalMolecule(size_t selectedComponent, [[maybe_unused]]const Molecule &molecule, std::vector<Atom> atoms, size_t moleculeId)
 {
   double l = 0.0;
   for (Atom& atom : atoms)
@@ -240,7 +242,12 @@ void System::insertFractionalMolecule(size_t selectedComponent, std::vector<Atom
   }
   std::vector<Atom>::const_iterator iterator =  iteratorForMolecule(selectedComponent, 0);
   atomPositions.insert(iterator, atoms.begin(), atoms.end());
+
+  std::vector<Molecule>::iterator moleculeIterator = indexForMolecule(selectedComponent, 0);
+  moleculePositions.insert(moleculeIterator, molecule);
+
   numberOfMoleculesPerComponent[selectedComponent] += 1;
+
 
   // set moleculesIds
   size_t index = numberOfFrameworkAtoms; // indexOfFirstMolecule(selectedComponent);
@@ -266,13 +273,18 @@ void System::insertFractionalMolecule(size_t selectedComponent, std::vector<Atom
 ///   - selectedComponent: the index of the component
 ///   - atoms: vector of atoms to be inserted
 /// - returns: 
-void System::insertMolecule(size_t selectedComponent, std::vector<Atom> atoms)
+void System::insertMolecule(size_t selectedComponent, [[maybe_unused]]const Molecule &molecule, std::vector<Atom> atoms)
 {
   std::vector<Atom>::const_iterator iterator = 
     iteratorForMolecule(selectedComponent, numberOfMoleculesPerComponent[selectedComponent]);
   atomPositions.insert(iterator, atoms.begin(), atoms.end());
+
+  std::vector<Molecule>::iterator moleculeIterator = indexForMolecule(selectedComponent, numberOfMoleculesPerComponent[selectedComponent]);
+  moleculePositions.insert(moleculeIterator, molecule);
+
   numberOfMoleculesPerComponent[selectedComponent] += 1;
   numberOfIntegerMoleculesPerComponent[selectedComponent] += 1;
+
 
   // Update the number of pseudo atoms per type (used for tail-corrections)
   for(Atom& atom: atoms)
@@ -281,8 +293,9 @@ void System::insertMolecule(size_t selectedComponent, std::vector<Atom> atoms)
     numberOfPseudoAtoms[selectedComponent][static_cast<size_t>(atom.type)] += 1;
     totalNumberOfPseudoAtoms[static_cast<size_t>(atom.type)] += 1;
   }
+
  
-  size_t index = numberOfFrameworkAtoms; // indexOfFirstMolecule(selectedComponent);
+  size_t index = numberOfFrameworkAtoms;
   for (size_t componentId = 0; componentId < components.size(); componentId++)
   {
     for (size_t i = 0; i < numberOfMoleculesPerComponent[componentId]; ++i)
@@ -309,10 +322,13 @@ void System::deleteMolecule(size_t selectedComponent, size_t selectedMolecule, c
   std::vector<Atom>::const_iterator iterator = iteratorForMolecule(selectedComponent, selectedMolecule);
   atomPositions.erase(iterator, iterator + static_cast<std::vector<Atom>::difference_type>(molecule.size()));
 
+  std::vector<Molecule>::iterator moleculeIterator = indexForMolecule(selectedComponent, selectedMolecule);
+  moleculePositions.erase(moleculeIterator, moleculeIterator + 1);
+
   numberOfMoleculesPerComponent[selectedComponent] -= 1;
   numberOfIntegerMoleculesPerComponent[selectedComponent] -= 1;
 
-  size_t index = numberOfFrameworkAtoms; // indexOfFirstMolecule(selectedComponent);
+  size_t index = numberOfFrameworkAtoms; 
   for (size_t componentId = 0; componentId < components.size(); componentId++)
   {
     for (size_t i = 0; i < numberOfMoleculesPerComponent[componentId]; ++i)
@@ -346,7 +362,7 @@ bool System::checkMoleculeIds()
 }
 
 void System::createInitialMolecules([[maybe_unused]] RandomNumber &random)                                              
-{                                                                                                                       
+{
   for (size_t componentId = 0; const Component & component : components)                                                
   {                                                                                                                     
     if (component.swapable)                                                                                             
@@ -357,17 +373,18 @@ void System::createInitialMolecules([[maybe_unused]] RandomNumber &random)
         std::optional<ChainData> growData = std::nullopt;                                                               
         do                                                                                                              
         {                                                                                                               
-          std::vector<Atom> atoms =                                                                                     
-            components[componentId].recenteredCopy(0.0, numberOfMoleculesPerComponent[componentId]);                    
+          //std::vector<Atom> atoms =                                                                                     
+          //  components[componentId].recenteredCopy(0.0, numberOfMoleculesPerComponent[componentId]);                    
+          std::cout << "grow:" << std::endl;
           Component::GrowType growType  = components[componentId].growType;                                             
           growData = CBMC::growMoleculeSwapInsertion(random, this->hasExternalField, this->components, this->forceField, this->simulationBox,
                                    this->spanOfFrameworkAtoms(), this->spanOfMoleculeAtoms(), this->beta,               
                                    growType, forceField.cutOffVDW, forceField.cutOffCoulomb, componentId,               
-                                   numberOfMoleculesPerComponent[componentId], 0.0, atoms, numberOfTrialDirections);    
+                                   numberOfMoleculesPerComponent[componentId], 0.0, numberOfTrialDirections);    
                                                                                                                         
-        } while (!growData || growData->energies.total() > forceField.overlapCriteria);                                 
+        } while (!growData || growData->energies.total() > forceField.overlapCriteria);
                                                                                                                         
-        insertFractionalMolecule(componentId, growData->atom, i);                                                       
+        insertFractionalMolecule(componentId, growData->molecule, growData->atom, i);
       }                                                                                                                 
     }                                                                                                                   
                                                                                                                         
@@ -376,17 +393,17 @@ void System::createInitialMolecules([[maybe_unused]] RandomNumber &random)
       std::optional<ChainData> growData = std::nullopt;                                                                 
       do                                                                                                                
       {                                                                                                                 
-        std::vector<Atom> atoms =                                                                                       
-          components[componentId].recenteredCopy(1.0, numberOfMoleculesPerComponent[componentId]);                      
+        //std::vector<Atom> atoms =                                                                                       
+        //  components[componentId].recenteredCopy(1.0, numberOfMoleculesPerComponent[componentId]);                      
         Component::GrowType growType  = components[componentId].growType;                                               
         growData = CBMC::growMoleculeSwapInsertion(random, this->hasExternalField, this->components, this->forceField, this->simulationBox,
                                  this->spanOfFrameworkAtoms(), this->spanOfMoleculeAtoms(), this->beta,                 
                                  growType, forceField.cutOffVDW, forceField.cutOffCoulomb, componentId,                 
-                                 numberOfMoleculesPerComponent[componentId], 1.0, atoms, numberOfTrialDirections);      
+                                 numberOfMoleculesPerComponent[componentId], 1.0, numberOfTrialDirections);
                                                                                                                         
       } while(!growData || growData->energies.total() > forceField.overlapCriteria);                                    
                                                                                                                         
-      insertMolecule(componentId, growData->atom);                                                                      
+      insertMolecule(componentId, growData->molecule, growData->atom);
     }                                                                                                                   
     componentId++;                                                                                                      
   }                                                                                                                     
@@ -414,6 +431,17 @@ std::vector<Atom>::iterator System::iteratorForMolecule(size_t selectedComponent
   size_t size = components[selectedComponent].atoms.size();
   index += size * selectedMolecule + numberOfFrameworkAtoms;
   return atomPositions.begin() + static_cast<std::vector<Atom>::difference_type>(index);
+}
+
+std::vector<Molecule>::iterator System::indexForMolecule(size_t selectedComponent, size_t selectedMolecule)
+{
+  size_t index{ 0 };
+  for (size_t i = 0; i < selectedComponent; ++i)
+  {
+    index += numberOfMoleculesPerComponent[i];
+  }
+  index += selectedMolecule;
+  return moleculePositions.begin() + static_cast<std::vector<Atom>::difference_type>(index);
 }
 
 std::span<const Atom> System::spanOfFrameworkAtoms() const
@@ -1127,7 +1155,7 @@ inline std::pair<EnergyStatus, double3x3> pair_acc(const std::pair<EnergyStatus,
 
 void System::precomputeTotalRigidEnergy() noexcept
 {
-  rigidEnergies.zero();
+  RunningEnergy rigidEnergies{};
   Interactions::computeEwaldFourierRigidEnergy(eik_x, eik_y, eik_z, eik_xy, 
                                                fixedFrameworkStoredEik, forceField, simulationBox,
                                                spanOfRigidFrameworkAtoms(), rigidEnergies);
@@ -1156,9 +1184,6 @@ void System::recomputeTotalEnergies() noexcept
                                           forceField, simulationBox,
                                           components, numberOfMoleculesPerComponent,
                                           moleculeAtomPositions, runningEnergies);
-
-  // correct for the energy of rigid parts
-  runningEnergies -= rigidEnergies;
 }
 
 
@@ -1186,14 +1211,47 @@ RunningEnergy System::computeTotalEnergies() noexcept
                                           components, numberOfMoleculesPerComponent,
                                           moleculeAtomPositions, runningEnergy);
 
-  // correct for the energy of rigid parts
-  runningEnergy -= rigidEnergies;
-
   return runningEnergy;
 }
 
-void System::computeTotalGradients() noexcept
+RunningEnergy System::computeTotalGradients() noexcept
 {
+  RunningEnergy running_energy{};
+
+  if(fixedFrameworkStoredEik.empty())
+  {
+    precomputeTotalRigidEnergy();
+  }
+
+  std::span<Atom> frameworkAtomPositions = spanOfFrameworkAtoms();
+  std::span<Atom> moleculeAtomPositions = spanOfMoleculeAtoms();
+
+  for(Atom& atom: moleculeAtomPositions)
+  {
+    atom.gradient = double3(0.0, 0.0, 0.0);
+  }
+
+  std::pair<ForceFactor,ForceFactor> frameworkMolecule = Interactions::computeInterMolecularGradient(forceField, simulationBox, moleculeAtomPositions);
+  std::pair<ForceFactor,ForceFactor> interMolecular = Interactions::computeFrameworkMoleculeGradient(forceField, simulationBox, frameworkAtomPositions, moleculeAtomPositions);
+  ForceFactor ewald = Interactions::computeEwaldFourierGradient(eik_x, eik_y, eik_z, eik_xy, fixedFrameworkStoredEik,
+                                                                forceField, simulationBox, components, numberOfMoleculesPerComponent, moleculeAtomPositions);
+
+  running_energy.externalFieldVDW = 0.0;
+  running_energy.frameworkMoleculeVDW = frameworkMolecule.first.energy;
+  running_energy.moleculeMoleculeVDW = interMolecular.first.energy;
+  running_energy.externalFieldCharge = 0.0;
+  running_energy.frameworkMoleculeCharge = frameworkMolecule.first.energy;
+  running_energy.moleculeMoleculeCharge = interMolecular.second.energy;
+  running_energy.ewald = ewald.energy;
+  running_energy.intraVDW = 0.0;
+  running_energy.intraCoul = 0.0;
+  running_energy.tail = 0.0;
+  running_energy.polarization = 0.0;
+  running_energy.dudlambdaVDW = frameworkMolecule.first.dUdlambda + interMolecular.first.dUdlambda;
+  running_energy.dudlambdaCharge = frameworkMolecule.second.dUdlambda + interMolecular.second.dUdlambda;
+  running_energy.dudlambdaEwald = ewald.dUdlambda;
+
+  return running_energy;
 }
 
 std::pair<EnergyStatus, double3x3> System::computeMolecularPressure() noexcept
@@ -1203,9 +1261,9 @@ std::pair<EnergyStatus, double3x3> System::computeMolecularPressure() noexcept
     atom.gradient = double3(0.0, 0.0, 0.0);
   }
 
-  std::pair<EnergyStatus, double3x3> pressureInfo = 
-      Interactions::computeFrameworkMoleculeEnergyStrainDerivative(forceField, frameworkComponents, components,
-                                                      simulationBox, spanOfFrameworkAtoms(), spanOfMoleculeAtoms());
+  std::pair<EnergyStatus, double3x3> pressureInfo =
+       Interactions::computeFrameworkMoleculeEnergyStrainDerivative(forceField, frameworkComponents, components,
+                                                       simulationBox, spanOfFrameworkAtoms(), spanOfMoleculeAtoms());
 
   pressureInfo = pair_acc(pressureInfo, Interactions::computeInterMolecularEnergyStrainDerivative(forceField, components, simulationBox,
                                                       spanOfMoleculeAtoms()));
@@ -1215,7 +1273,6 @@ std::pair<EnergyStatus, double3x3> System::computeMolecularPressure() noexcept
                                                             frameworkComponents, components, numberOfMoleculesPerComponent, 
                                                             spanOfMoleculeAtoms()));
 
-  //pressureInfo.first.interComponentEnergies[0].CoulombicFourier -= EnergyFactor(rigidEnergies.ewald, 0.0);
   pressureInfo.first.sumTotal();
 
 
@@ -1263,9 +1320,71 @@ std::pair<EnergyStatus, double3x3> System::computeMolecularPressure() noexcept
   return pressureInfo;
 }
 
-void System::MD_Loop()
+void System::integrate()
 {
+  // evolve the positions a half timestep
+  //UpdateVelocities();
+
+  // evolve the positions a full timestep
+  //UpdatePositions();
+
+  // first part of bond-constraints
+  //RattleStageOne();
+
+  // evolve the part of rigid bodies involving free rotation
+  //NoSquishFreeRotorOrderTwo();
+
+  // compute the forces on all the atoms
+  //CalculateForce();
+
+  // evolve the positions a half timestep
+  //UpdateVelocities();
+
+  // second part of bond-constraints
+  //RattleStageTwo();
 }
+
+void System::computeCenterOfMassAndQuaternionGradients()
+{
+  std::span<Atom> moleculeAtomPositions = spanOfMoleculeAtoms();
+
+  size_t index{};
+  size_t moleculeIndex{};
+  for(size_t l = 0; l != components.size(); ++l)
+  {
+    size_t size = components[l].atoms.size();
+    for(size_t m = 0; m != numberOfMoleculesPerComponent[l]; ++m)
+    {
+      std::span<Atom> span = std::span(&moleculeAtomPositions[index], size);
+      double3 com_gradient{};
+      for(size_t i = 0; i != span.size(); i++)
+      {
+        com_gradient += span[i].gradient;
+      }
+
+      double3 torque{};
+      simd_quatd orientation = moleculePositions[moleculeIndex].orientation;
+      double3x3 M = double3x3::buildRotationMatrix(orientation);
+      double inverseMoleculeMass = 1.0 / components[l].totalMass;
+      for(size_t i = 0; i != span.size(); i++)
+      {
+        double mass = components[l].definedAtoms[i].second;
+        double3 F = M * (span[i].gradient - com_gradient * mass * inverseMoleculeMass);
+        double3 dr = components[l].atoms[i].position;
+        torque += double3::cross(F, dr);
+      }
+      moleculePositions[moleculeIndex].gradient = com_gradient;
+      moleculePositions[moleculeIndex].orientationGradient.ix = -2.0 * ( orientation.r  * torque.x - orientation.iz * torque.y + orientation.iy * torque.z);
+      moleculePositions[moleculeIndex].orientationGradient.iy = -2.0 * ( orientation.iz * torque.x + orientation.r  * torque.y - orientation.ix * torque.z);
+      moleculePositions[moleculeIndex].orientationGradient.iz = -2.0 * (-orientation.iy * torque.x + orientation.ix * torque.y + orientation.r  * torque.z);
+      moleculePositions[moleculeIndex].orientationGradient.r  = -2.0 * (-orientation.ix * torque.x - orientation.iy * torque.y - orientation.iz * torque.z);
+
+      ++moleculeIndex;
+      index += size;
+    }
+  }
+}
+
 
 std::vector<Atom> 
 System::equilibratedMoleculeRandomInBox(RandomNumber &random, size_t selectedComponent,
@@ -1399,8 +1518,8 @@ Archive<std::ofstream> &operator<<(Archive<std::ofstream> &archive, const System
   archive << s.simulationBox;
   archive << s.averageSimulationBox;
   archive << s.atomPositions;
+  archive << s.moleculePositions;
   archive << s.runningEnergies;
-  archive << s.rigidEnergies;
   archive << s.averageEnergies;
   archive << s.currentExcessPressureTensor;
   archive << s.currentEnergyStatus;
@@ -1484,8 +1603,8 @@ Archive<std::ifstream> &operator>>(Archive<std::ifstream> &archive, System &s)
   archive >> s.simulationBox;
   archive >> s.averageSimulationBox;
   archive >> s.atomPositions;
+  archive >> s.moleculePositions;
   archive >> s.runningEnergies;
-  archive >> s.rigidEnergies;
   archive >> s.averageEnergies;
   archive >> s.currentExcessPressureTensor;
   archive >> s.currentEnergyStatus;
