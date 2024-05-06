@@ -134,7 +134,7 @@ void MC_Moves::ParallelTemperingSwap(RandomNumber &random, System &systemA, Syst
     std::swap(systemA.numberOfPseudoAtoms, systemB.numberOfPseudoAtoms);
     std::swap(systemA.totalNumberOfPseudoAtoms, systemB.totalNumberOfPseudoAtoms);
     std::swap(systemA.runningEnergies, systemB.runningEnergies);
-    std::swap(systemA.rigidEnergies, systemB.rigidEnergies);
+    // std::swap(systemA.rigidEnergies, systemB.rigidEnergies);
 
     // How do we want to average these things?
     // std::swap(systemA.averageEnergies, systemB.averageEnergies);

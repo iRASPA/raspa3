@@ -1,8 +1,9 @@
 {
   "SimulationType" : "MonteCarlo",
-  "NumberOfCycles" : 25000,
-  "NumberOfInitializationCycles" : 10000,
+  "NumberOfCycles": 2500,
+  "NumberOfInitializationCycles": 1000,
   "PrintEvery" : 1000,
+  "GibbsVolumeMoveProbability": 0.01,
   
   "Systems" : 
   [
@@ -10,15 +11,13 @@
       "Type" : "Box",
       "BoxLengths" : [30.0, 30.0, 30.0],
       "ExternalTemperature" : 240.0,
-      "ChargeMethod" : "Ewald",
-      "GibbsVolumeMoveProbability" : 0.01
+      "ChargeMethod": "Ewald"
     },
     {
       "Type" : "Box",
       "BoxLengths" : [30.0, 30.0, 30.0],
       "ExternalTemperature" : 240.0,
-      "ChargeMethod" : "Ewald",
-      "GibbsVolumeMoveProbability" : 0.01
+      "ChargeMethod": "Ewald"
     }
   ],
 
@@ -31,7 +30,10 @@
       "RotationProbability" : 0.5,
       "ReinsertionProbability" : 0.5,
       "GibbsCFCMCSwapProbability" : 1.0,
-      "CreateNumberOfMolecules" : [256, 256]
+      "CreateNumberOfMolecules": [
+        64,
+        64
+      ]
     }
   ]
 }

@@ -1,9 +1,10 @@
 {
   "SimulationType": "ParallelTempering",
-  "NumberOfCycles": 10000,
-  "NumberOfInitializationCycles": 10000,
+  "NumberOfCycles": 1000,
+  "NumberOfInitializationCycles": 1000,
   "PrintEvery": 100,
   "NumberOfThreads": 1,
+  "ParallelTemperingSwapProbability": 0.001,
   "Systems": [
     {
       "Type": "Box",
@@ -13,9 +14,7 @@
         30.0
       ],
       "ExternalTemperature": 200.0,
-      "ChargeMethod": "None",
-      "ParallelTemperingSwapProbability": 0.001,
-      "Movies": true
+      "ChargeMethod": "None"
     },
     {
       "Type": "Box",
@@ -25,40 +24,15 @@
         30.0
       ],
       "ExternalTemperature": 300.0,
-      "ChargeMethod": "None",
-      "ParallelTemperingSwapProbability": 0.001,
-      "Movies": true
-    },
-    {
-      "Type": "Box",
-      "BoxLengths": [
-        30.0,
-        30.0,
-        30.0
-      ],
-      "ExternalTemperature": 400.0,
-      "ChargeMethod": "None",
-      "ParallelTemperingSwapProbability": 0.001,
-      "Movies": true
-    },
-    {
-      "Type": "Box",
-      "BoxLengths": [
-        30.0,
-        30.0,
-        30.0
-      ],
-      "ExternalTemperature": 500.0,
-      "ChargeMethod": "None",
-      "ParallelTemperingSwapProbability": 0.001
+      "ChargeMethod": "None"
     }
   ],
   "Components": [
     {
       "Name": "methane",
       "MoleculeDefinition": "ExampleDefinitions",
-      "TranslationProbability": 0.95,
-      "CreateNumberOfMolecules": 100
+      "TranslationProbability": 1.0,
+      "CreateNumberOfMolecules": 20
     }
   ]
 }
