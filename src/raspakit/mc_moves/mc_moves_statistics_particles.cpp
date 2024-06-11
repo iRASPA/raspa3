@@ -1,21 +1,21 @@
 module;
 
 #ifdef USE_LEGACY_HEADERS
-#include <string>
-#include <sstream>
 #include <fstream>
+#include <sstream>
+#include <string>
 #if defined(__has_include) && __has_include(<format>)
 #include <format>
 #endif
-#include <exception>
-#include <source_location>
-#include <complex>
-#include <vector>
-#include <array>
-#include <map>
 #include <algorithm>
+#include <array>
+#include <complex>
+#include <exception>
+#include <map>
+#include <source_location>
+#include <vector>
 #if defined(__has_include) && __has_include(<print>)
-  #include <print>
+#include <print>
 #endif
 #endif
 
@@ -34,20 +34,19 @@ import <array>;
 import <map>;
 import <algorithm>;
 #if defined(__has_include) && __has_include(<print>)
-  import <print>;
+import <print>;
 #endif
 #endif
 
 #if !(defined(__has_include) && __has_include(<print>))
-  import print;
+import print;
 #endif
-
 
 import archive;
 import double3;
 import move_statistics;
 import stringutils;
-
+import hdf5;
 
 void MCMoveStatisticsParticles::clearMoveStatistics()
 {
@@ -81,19 +80,20 @@ void MCMoveStatisticsParticles::optimizeMCMoves()
   GibbsSwapMove_CFCMC.optimizeAcceptance(0.0, 1.0);
 }
 
-std::string formatStatistics(const std::string name, const MoveStatistics<double>& move)
+std::string formatStatistics(const std::string name, const MoveStatistics<double> &move)
 {
   std::ostringstream stream;
   std::print(stream, "    {} all:          {:10}\n", name, move.allCounts);
   std::print(stream, "    {} total:        {:10}\n", name, move.totalCounts);
   std::print(stream, "    {} constructed:  {:10}\n", name, move.totalConstructed);
   std::print(stream, "    {} accepted:     {:10}\n", name, move.totalAccepted);
-  std::print(stream, "    {} fraction:     {:10f}\n", name, move.totalAccepted / std::max(1.0, double(move.totalCounts)));
+  std::print(stream, "    {} fraction:     {:10f}\n", name,
+             move.totalAccepted / std::max(1.0, double(move.totalCounts)));
   std::print(stream, "    {} max-change:   {:10f}\n\n", name, move.maxChange);
   return stream.str();
 }
 
-std::string formatStatistics(const std::string name, const MoveStatistics<double3>& move)
+std::string formatStatistics(const std::string name, const MoveStatistics<double3> &move)
 {
   std::ostringstream stream;
   std::print(stream, "    {} all:          {:10}\n", name, move.allCounts);
@@ -107,9 +107,45 @@ std::string formatStatistics(const std::string name, const MoveStatistics<double
                      name, move.totalAccepted.x / std::max(1.0, double(move.totalCounts.x)),
                      move.totalAccepted.y / std::max(1.0, double(move.totalCounts.y)), 
                      move.totalAccepted.z / std::max(1.0, double(move.totalCounts.z)));
-  std::print(stream, "    {} max-change:   {:10f} {:10f} {:10f}\n\n", 
-                     name, move.maxChange.x, move.maxChange.y, move.maxChange.z);
+  std::print(stream, "    {} max-change:   {:10f} {:10f} {:10f}\n\n", name, move.maxChange.x, move.maxChange.y,
+             move.maxChange.z);
   return stream.str();
+}
+
+std::vector<double> asVector(const MoveStatistics<double> &move)
+{
+  std::vector<double> v{move.totalCounts, move.totalConstructed, move.totalAccepted,
+                        move.totalAccepted / std::max(1.0, double(move.totalCounts)), move.maxChange};
+  return v;
+}
+
+std::vector<double> asVector(const MoveStatistics<double3> &move)
+{
+  std::vector<double> v{move.totalCounts.x,
+                        move.totalCounts.y,
+                        move.totalCounts.z,
+                        move.totalConstructed.x,
+                        move.totalConstructed.y,
+                        move.totalConstructed.z,
+                        move.totalAccepted.x,
+                        move.totalAccepted.y,
+                        move.totalAccepted.z,
+                        move.totalAccepted.x / std::max(1.0, double(move.totalCounts.x)),
+                        move.totalAccepted.y / std::max(1.0, double(move.totalCounts.y)),
+                        move.totalAccepted.z / std::max(1.0, double(move.totalCounts.z)),
+                        move.maxChange.x,
+                        move.maxChange.y,
+                        move.maxChange.z};
+  return v;
+}
+
+void logStatistics(HDF5Writer &hdf5, const std::string &dataset, const MoveStatistics<double> &move)
+{
+  std::vector data = asVector(move);
+}
+void logStatistics(HDF5Writer &hdf5, const std::string &dataset, const MoveStatistics<double3> &move)
+{
+  std::vector data = asVector(move);
 }
 
 const std::string MCMoveStatisticsParticles::writeMCMoveStatistics() const
@@ -180,7 +216,7 @@ const std::string MCMoveStatisticsParticles::writeMCMoveStatistics() const
   {
     std::print(stream, "{}", formatStatistics("Gibbs Swap (CBMC)", GibbsSwapMove_CBMC));
   }
-  if (GibbsSwapMove_CFCMC.totalCounts.x > 0.0) 
+  if (GibbsSwapMove_CFCMC.totalCounts.x > 0.0)
   {
     std::print(stream, "{}", formatStatistics("Gibbs Swap (CFCMC)", GibbsSwapMove_CFCMC));
   }
@@ -325,12 +361,13 @@ Archive<std::ifstream> &operator>>(Archive<std::ifstream> &archive, MCMoveStatis
 {
   uint64_t versionNumber;
   archive >> versionNumber;
-  if(versionNumber > p.versionNumber)
+  if (versionNumber > p.versionNumber)
   {
-    const std::source_location& location = std::source_location::current();
-    throw std::runtime_error(std::format("Invalid version reading 'MCMoveStatisticsParticles' "
-                                         "at line {} in file {}\n",
-                                         location.line(), location.file_name()));
+    const std::source_location &location = std::source_location::current();
+    throw std::runtime_error(
+        std::format("Invalid version reading 'MCMoveStatisticsParticles' "
+                    "at line {} in file {}\n",
+                    location.line(), location.file_name()));
   }
 
   archive >> p.translationMove;
@@ -355,4 +392,3 @@ Archive<std::ifstream> &operator>>(Archive<std::ifstream> &archive, MCMoveStatis
 
   return archive;
 }
-

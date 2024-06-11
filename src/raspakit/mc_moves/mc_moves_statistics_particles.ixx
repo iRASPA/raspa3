@@ -1,9 +1,9 @@
 module;
 
 #ifdef USE_LEGACY_HEADERS
-#include <string>
 #include <chrono>
 #include <fstream>
+#include <string>
 #endif
 
 export module mc_moves_statistics_particles;
@@ -17,16 +17,17 @@ import <fstream>;
 import double3;
 import archive;
 import move_statistics;
+import hdf5;
 
 export struct MCMoveStatisticsParticles
 {
-  uint64_t versionNumber{ 1 };
+  uint64_t versionNumber{1};
 
-  bool operator==(MCMoveStatisticsParticles const&) const = default;
+  bool operator==(MCMoveStatisticsParticles const &) const = default;
 
-  MoveStatistics<double3> translationMove{ .maxChange = double3(1.0,1.0,1.0) };
+  MoveStatistics<double3> translationMove{.maxChange = double3(1.0, 1.0, 1.0)};
   MoveStatistics<double3> randomTranslationMove{};
-  MoveStatistics<double3> rotationMove{ .maxChange = double3(1.0,1.0,1.0) };
+  MoveStatistics<double3> rotationMove{.maxChange = double3(1.0, 1.0, 1.0)};
   MoveStatistics<double3> randomRotationMove{};
   MoveStatistics<double> reinsertionMove_CBMC{};
   MoveStatistics<double> identityChangeMove_CBMC{};
@@ -41,12 +42,13 @@ export struct MCMoveStatisticsParticles
   MoveStatistics<double> WidomMove_CFCMC_CBMC{};
 
   MoveStatistics<double> GibbsSwapMove_CBMC{};
-  MoveStatistics<double3> GibbsSwapMove_CFCMC{ .maxChange = double3(0.0,0.0,0.5) };
-  MoveStatistics<double3> GibbsSwapMove_CFCMC_CBMC{ .maxChange = double3(0.0,0.0,0.5)};
+  MoveStatistics<double3> GibbsSwapMove_CFCMC{.maxChange = double3(0.0, 0.0, 0.5)};
+  MoveStatistics<double3> GibbsSwapMove_CFCMC_CBMC{.maxChange = double3(0.0, 0.0, 0.5)};
 
   void clearMoveStatistics();
   void optimizeMCMoves();
   const std::string writeMCMoveStatistics() const;
+  void logMCMoveStatistics(HDF5Writer &hdf5) const;
 
   const std::string writeMCMoveStatistics(size_t countTotal, size_t componentId,
                                           const std::string &componentName) const;

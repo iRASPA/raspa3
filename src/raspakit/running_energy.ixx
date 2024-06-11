@@ -1,18 +1,17 @@
 module;
 
 #ifdef USE_LEGACY_HEADERS
-#include <string>
-#include <vector>
-#include <map>
-#include <cmath>
 #include <algorithm>
-#include <iostream>
-#include <numeric>
-#include <string>
-#include <sstream>
-#include <ostream>
+#include <cmath>
 #include <fstream>
 #include <functional>
+#include <iostream>
+#include <map>
+#include <numeric>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <vector>
 #endif
 
 export module running_energy;
@@ -34,21 +33,27 @@ import <functional>;
 
 import archive;
 import scaling;
-
+import hdf5;
 
 export struct RunningEnergy
 {
-  RunningEnergy() : externalFieldVDW(0.0), frameworkMoleculeVDW(0.0), moleculeMoleculeVDW(0.0), 
-                    externalFieldCharge(0.0), frameworkMoleculeCharge(0.0), moleculeMoleculeCharge(0.0),
-                    ewald(0.0),
-                    intraVDW(0.0), intraCoul(0.0),
-                    tail(0.0),
-                    polarization(0.0),
-                    dudlambdaVDW(0.0),
-                    dudlambdaCharge(0.0),
-                    dudlambdaEwald(0.0),
-                    translationalKineticEnergy(0.0),
-                    rotationalKineticEnergy(0.0)
+  RunningEnergy()
+      : externalFieldVDW(0.0),
+        frameworkMoleculeVDW(0.0),
+        moleculeMoleculeVDW(0.0),
+        externalFieldCharge(0.0),
+        frameworkMoleculeCharge(0.0),
+        moleculeMoleculeCharge(0.0),
+        ewald(0.0),
+        intraVDW(0.0),
+        intraCoul(0.0),
+        tail(0.0),
+        polarization(0.0),
+        dudlambdaVDW(0.0),
+        dudlambdaCharge(0.0),
+        dudlambdaEwald(0.0),
+        translationalKineticEnergy(0.0),
+        rotationalKineticEnergy(0.0)
   {
   }
 
@@ -56,37 +61,28 @@ export struct RunningEnergy
   std::string printMD() const;
   std::string printMC(const std::string& label) const;
   std::string printMD(const std::string& label, double referenceEnergy) const;
-  
+
+  void logMC(HDF5Writer& hdf5, const std::string& label) const;
+  void logMD(HDF5Writer& hdf5, const std::string& label, double referenceEnergy) const;
+
   inline double potentialEnergy() const
   {
-    return externalFieldVDW + frameworkMoleculeVDW + moleculeMoleculeVDW + 
-           externalFieldCharge + frameworkMoleculeCharge + moleculeMoleculeCharge +
-           ewald + 
-           intraVDW + intraCoul + 
-           tail + 
-           polarization;
+    return externalFieldVDW + frameworkMoleculeVDW + moleculeMoleculeVDW + externalFieldCharge +
+           frameworkMoleculeCharge + moleculeMoleculeCharge + ewald + intraVDW + intraCoul + tail + polarization;
   }
 
-  inline double kineticEnergy() const
-  {
-    return translationalKineticEnergy + rotationalKineticEnergy;
-  }
+  inline double kineticEnergy() const { return translationalKineticEnergy + rotationalKineticEnergy; }
 
   inline double conservedEnergy() const
   {
-    return externalFieldVDW + frameworkMoleculeVDW + moleculeMoleculeVDW + 
-           externalFieldCharge + frameworkMoleculeCharge + moleculeMoleculeCharge +
-           ewald + 
-           intraVDW + intraCoul + 
-           tail + 
-           polarization +
-           translationalKineticEnergy +
-           rotationalKineticEnergy;
+    return externalFieldVDW + frameworkMoleculeVDW + moleculeMoleculeVDW + externalFieldCharge +
+           frameworkMoleculeCharge + moleculeMoleculeCharge + ewald + intraVDW + intraCoul + tail + polarization +
+           translationalKineticEnergy + rotationalKineticEnergy;
   }
 
   inline double dudlambda(double lambda) const
   {
-    return Scaling::scalingVDWDerivative(lambda) * dudlambdaVDW + 
+    return Scaling::scalingVDWDerivative(lambda) * dudlambdaVDW +
            Scaling::scalingCoulombDerivative(lambda) * (dudlambdaCharge + dudlambdaEwald);
   }
 
@@ -128,7 +124,7 @@ export struct RunningEnergy
     dudlambdaEwald += b.dudlambdaEwald;
     translationalKineticEnergy += b.translationalKineticEnergy;
     rotationalKineticEnergy += b.rotationalKineticEnergy;
-    
+
     return *this;
   }
 
@@ -177,7 +173,7 @@ export struct RunningEnergy
     return v;
   }
 
-  uint64_t versionNumber{ 1 };
+  uint64_t versionNumber{1};
 
   double externalFieldVDW;
   double frameworkMoleculeVDW;
@@ -196,8 +192,8 @@ export struct RunningEnergy
   double translationalKineticEnergy;
   double rotationalKineticEnergy;
 
-  friend Archive<std::ofstream> &operator<<(Archive<std::ofstream> &archive, const RunningEnergy &c);
-  friend Archive<std::ifstream> &operator>>(Archive<std::ifstream> &archive, RunningEnergy &c);
+  friend Archive<std::ofstream>& operator<<(Archive<std::ofstream>& archive, const RunningEnergy& c);
+  friend Archive<std::ifstream>& operator>>(Archive<std::ifstream>& archive, RunningEnergy& c);
 };
 
 export inline RunningEnergy operator+(const RunningEnergy& a, const RunningEnergy& b)
@@ -244,7 +240,6 @@ export inline RunningEnergy operator-(const RunningEnergy& a, const RunningEnerg
   m.rotationalKineticEnergy = a.rotationalKineticEnergy - b.rotationalKineticEnergy;
   return m;
 }
-
 
 export inline RunningEnergy operator*(double a, const RunningEnergy b)
 {
